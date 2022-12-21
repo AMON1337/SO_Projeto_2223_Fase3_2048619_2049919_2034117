@@ -1,0 +1,13 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+// bibliotecas uteis para o projeto
+#include <stdbool.h> //Poder usar bools
+#include <string.h>  //Poder usar srings
+
+#define UNIXSTR_PATH "/tmp/s.SoProj2223"
+#define UNIXDG_PATH "/tmp/s.unixdgx"
+#define UNIXDG_TMP "/tmp/dgXXXXXXX"

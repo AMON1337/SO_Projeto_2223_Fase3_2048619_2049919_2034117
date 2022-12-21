@@ -1,0 +1,54 @@
+!------ LOGS DA SIMULAÇÃO ------!
+
+***Configuração Inicial da Discoteca***
+Numero de zonas na discoteca: 5
+Nome da zona 0: entrada
+Nome da zona 1: pista_publica
+Nome da zona 2: zona_vip
+Nome da zona 3: wc
+Nome da zona 4: restaurante
+
+Capacidades máximas das zonas
+Capacidade máxima da zona 0: 333
+Capacidade máxima da zona 1: 100
+Capacidade máxima da zona 2: 25
+Capacidade máxima da zona 3: 1
+Capacidade máxima da zona 4: 18
+
+Capacidades máximas das filas das zonas
+Capacidade máxima da fila da zona 0: 50
+Capacidade máxima da fila da zona 1: 25
+Capacidade máxima da fila da zona 2: 5
+Capacidade máxima da fila da zona 3: 15
+Capacidade máxima da fila da zona 4: 0
+
+Probabilidades da simulação
+Probabilidade de desistir da fila: 40
+Probabilidade de ser VIP: 15
+Probabilidade de ser expluso: 1
+
+****Acontecimentos da simulação***
+60 : Abertura da Discoteca
+69 : Encerramento da Discoteca
+
+00 : Entrada para a Discoteca
+01 : Entrada pista de dança
+02 : Entrada zona VIP
+03 : Entrada na WC
+04 : Entrada no restaurante
+
+10 : Espera na fila - Discoteca
+11 : Espera na fila - Pista de dança
+12 : Espera na fila - Zona VIP
+13 : Espera na fila - WC
+
+20 : Desistência da fila - Discoteca
+21 : Desistência da fila - Pista de Dança
+22 : Desistência da fila - Zona VIP
+23 : Desistência da fila - WC
+
+30 : Saída - Discoteca
+31 : Saída - Pista de Dança
+32 : Saída - Zona VIP
+33 : Saída- WC
+34 : Saída - restaurante
