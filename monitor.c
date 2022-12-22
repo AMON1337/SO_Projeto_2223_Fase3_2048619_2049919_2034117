@@ -1,5 +1,5 @@
 //  Monitor sockets-unix-stream dado nas Aulas TP de Sockets.
-//  Servidor = monitor
+//  Servidor = Monitor
 //  Cliente = Simulador
 //  Monitor recebe dados do Cliente e mostra no ecrã
 

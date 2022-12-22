@@ -9,5 +9,5 @@
 #include <string.h>  //Poder usar srings
 
 #define UNIXSTR_PATH "/tmp/s.SoProj2223"
-#define UNIXDG_PATH "/tmp/s.unixdgx"
-#define UNIXDG_TMP "/tmp/dgXXXXXXX"
+#define UNIXDG_PATH "/tmp/s.SoProj2223"
+#define UNIXDG_TMP "/tmp/dgSoProj2223"

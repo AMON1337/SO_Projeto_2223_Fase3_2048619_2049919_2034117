@@ -1,11 +1,13 @@
-#include "unix.h"    //Tem as bibliotecas comuns do projeto
-#include <pthread.h> //Usar tarefas para simular uma pessoa
-#include <time.h>    //tempo da simulação
-#define MAXLINE 512
+#include "unix.h"       //Tem as bibliotecas comuns do projeto
+#include <pthread.h>    //Usar tarefas para simular uma pessoa
+#include <time.h>       //Tempo da simulação
+#include <semaphore.h>  //Usar semaforos
 
-// Estrutura de dados
+//Comunicação com o Monitor
+#define MAXLINE 512     //Tamanho da Mensagem
 
-typedef struct cliente_info
+// Estruturas de dados
+typedef struct cliente
 {                      // tarefa = cliente
     int id_cliente;    // ID do cliente
     int acontecimento; // O que esta a fazer agora
@@ -38,13 +40,12 @@ typedef struct discoteca
 
 struct discoteca disco; // Estado interno da nossa DISCOTECA
 
-struct cliente_info thread_array[500]; // Serão criados 500 tarefas/clientes
+struct cliente thread_array[500]; // Serão criados 500 tarefas/clientes
 
 // etc...
 
 void lerConfigInicial()
 {
-    char content[MAXLINE]; // temporário só para mostar o contéudo do ficheiro no terminal
     char nome[MAXLINE];
     char valor[MAXLINE];
 
@@ -105,6 +106,7 @@ void lerConfigInicial()
 
     fclose(fpConfig);
 }
+
 void logInicialDisco() // Escreve no ficheiro de LOGS da simulação
 {
     FILE *fpLog = fopen("logSimulador.log", "w"); // Abrir e/ou criar o ficheiro logs para escrever
@@ -172,8 +174,9 @@ void logInicialDisco() // Escreve no ficheiro de LOGS da simulação
 
     fclose(fpLog);
 }
+
 void printInicialDisco()
-{ // Faz um print do estado inicial da discoteca
+{ // Faz um print do estado inicial da discoteca no ecrã da simulação
     printf("***Configuração Inicial da Discoteca***\n");
 
     printf("Numero de zonas na discoteca: %d\n", disco.n_zonas);
@@ -261,6 +264,13 @@ int main(void)
     logInicialDisco();   // LOGS - Escreve nos logs do simulador o estado incial da discoteca
     printInicialDisco(); // ECRÂ SIMULAÇÂO - Print do estado incial da discoteca
 
+    
+    //Inicializar os Semáforos
+
+
+    //Iniciar Simulação
+    
+    
     /*______________________AQUI ACABA O NOSSO TABALHO______________________*/
 
     /* Envia as linhas lidas do teclado para o socket */

@@ -1,9 +1,11 @@
-
 /* Funções utilit�rias retiradas de "UNIX Networking Programming" */
 
 /* Lê nbytes de um ficheiro/socket.
    Bloqueia at� conseguir ler os nbytes ou dar erro */
 #include "unix.h"
+
+#include <stdio.h>
+#include <errno.h>
 
 int readn(fd, ptr, nbytes)
 int fd;
@@ -91,8 +93,9 @@ int maxlen;
 	return (n);
 }
 
-#include <stdio.h>
-#include <errno.h>
+
+//#include <stdio.h> 
+//#include <errno.h>
 
 /* Mensagem de erro */
 

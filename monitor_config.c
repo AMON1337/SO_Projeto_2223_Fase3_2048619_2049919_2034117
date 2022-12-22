@@ -17,8 +17,8 @@ str_echo(sockfd) int sockfd;
         //_____________________AQUI SERÁ FEITO O TRABALHO DA PARTE DO MONITOR_____________________//
         printf(" _____________________________________ \n");
         printf("(_______________MONITOR_______________)\n");
-        printf("(                dados imp            )\n");
-        printf("(       1           2           3     )\n");
+        printf("(             mostrar dados           )\n");
+        printf("(       tratar acontecimentos         )\n");
         printf("(_____________________________________)\n");
         /* Lê uma linha do socket */
 

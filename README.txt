@@ -1,15 +1,20 @@
 Projeto SO 22/23 Simulação de uma discoteca!
+Alunos: 
+Filipe Lopes - 2048619
+Tom Mendonça - 2049919
+José Branco  - 2034117
 
 Instruções:
 
-1- Executar o comando make clean e make.
-2- Ligar o monitor
-3- Ligar o simulador
-4- Executar o Projeto
+1- Executar o comando make clean e depois o comando make.
+2- Ligar o monitor.
+3- Ligar o simulador.
+4- Executar o Projeto.
 
 O simulador só executa depois do monitor se ter ligado.
 
-*--- Dos sockets sockets-unix-stream para o nosso projeto  ---*
+
+*--- Usamos os sockets sockets-unix-stream para o nosso projeto  ---*
 
 unix-stream-server.c = monitor.c
 util-stream-server.c = monitor_config.c
@@ -17,7 +22,8 @@ util-stream-server.c = monitor_config.c
 unix-stream-client.c = simulador.c
 util-stream-client.c = simulador_config.c
 
-*---                                                        ---*
+*---                                                             ---*
+
 
 Acontecimentos do projeto:
 
