@@ -6,6 +6,9 @@
    Lê string de fp e envia para sockfd.
    Lê string de sockfd e envia para stdout */
 
+// Ojetivo será enviar cada acontecimento codificado numa linha só, 
+// No monitor será descodificado e mostrado. 
+
 str_cli(fp, sockfd)
     FILE *fp;
 int sockfd;

@@ -39,10 +39,9 @@ main(void)
     listen(sockfd, 5);
 
     // EXTRA TEXT AO INCIAR - NÃO ESSENCIAL para o funcionamento dos sockets
-
-    system("clear");            // limpar a consola
-    printf("Monitor ONLINE\n"); // Texto para dizer que o monitor está ligado
-
+    system("clear");                                 // limpar a consola
+    printf("Monitor ONLINE\n");                      // Texto para dizer que o monitor está ligado
+    printf("Esperando a ligação com o simulador...\n"); // Texto para dizer que o monitor está ligado
     // EXTRA TEXT AO INCIAR - NÃO ESSENCIAL para o funcionamento dos sockets
 
     for (;;)
