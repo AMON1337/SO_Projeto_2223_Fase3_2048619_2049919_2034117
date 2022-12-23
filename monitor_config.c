@@ -30,33 +30,10 @@ str_echo(sockfd) int sockfd;
         switch (opcao)
         {
         case 'y':
-        /*
-            // Envia opçao para o simulador para começar simulação
-            n = strlen(opcao);
-            if (n == 0)
-                return;
-            else if (n < 0)
-                err_dump("str_echo: readline error");
-
-            if (writen(sockfd, opcao, n) != n)
-                err_dump("str_echo: writen error");
-            */
             printf("\nSimulação Iniciada!\n");
             menu = 1; // Sai do menu
             break;
         case 'Y':
-        /*
-            // Envia opçao para o simulador para começar simulação
-            n = strlen(opcao);
-            if (n == 0)
-                return;
-            else if (n < 0)
-                err_dump("str_echo: readline error");
-
-            if (writen(sockfd, opcao, n) != n)
-                err_dump("str_echo: writen error");
-
-            printf("\nSimulação Iniciada!\n");*/
             menu = 1; // Sai do menu
             break;
         case 'n':

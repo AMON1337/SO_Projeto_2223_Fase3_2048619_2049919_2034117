@@ -278,20 +278,18 @@ int main(void)
 
     printf("Simulador ONLINE\n\n"); //
 
+    // Esperar iniciar simulação
+    printf("Esperando para començar a simulação...\n");
+    while (inciciarSimulacao == 0)
+    {
+    }
+
     lerConfigInicial(); // Lê do ficheiro incial a configuração inicial
 
     logInicialDisco();   // LOGS - Escreve nos logs do simulador o estado incial da discoteca
     printInicialDisco(); // ECRÂ SIMULAÇÂO - Print do estado incial da discoteca
 
     // Inicializar os Semáforos
-
-    // Esperar iniciar simulação
-    printf("Esperando para començar a simulação...\n");
-    /*
-    while (inciciarSimulacao == 0)
-    {
-        printf("Esperando..");
-    }*/
 
     // Criação das tarefas
     int i = 0;
