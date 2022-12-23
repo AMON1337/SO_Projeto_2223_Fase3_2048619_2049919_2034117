@@ -1,10 +1,10 @@
-#include "unix.h"       //Tem as bibliotecas comuns do projeto
-#include <pthread.h>    //Usar tarefas para simular uma pessoa
-#include <time.h>       //Tempo da simulação
-#include <semaphore.h>  //Usar semaforos
+#include "unix.h"      //Tem as bibliotecas comuns do projeto
+#include <pthread.h>   //Usar tarefas para simular uma pessoa
+#include <time.h>      //Tempo da simulação
+#include <semaphore.h> //Usar semaforos
 
-//Comunicação com o Monitor
-#define MAXLINE 512     //Tamanho da Mensagem
+// Comunicação com o Monitor
+#define MAXLINE 512 // Tamanho da Mensagem
 
 // Estruturas de dados
 typedef struct cliente
@@ -12,7 +12,7 @@ typedef struct cliente
     int id_cliente;    // ID do cliente
     int acontecimento; // O que esta a fazer agora
     int tempo;         // Ainda não sei como implementar
-    bool vip;          // 1 - VIP | 0 - Não é VIP
+    int vip;           // 1 - VIP | 0 - Não é VIP
 };
 
 typedef struct discoteca
@@ -42,14 +42,18 @@ struct discoteca disco; // Estado interno da nossa DISCOTECA
 
 struct cliente thread_array[500]; // Serão criados 500 tarefas/clientes
 
-// etc...
+pthread_t threads[500]; // Serão criados 500 tarefas/clientes
+
+int capacidadeDisco = 500; // Utilizado para criar tarefas no int main();
+
+int inciciarSimulacao = 0; // 0 - Espera pelo monitor iniciar, 1 - O monitor deu sinal iniciar
 
 void lerConfigInicial()
 {
     char nome[MAXLINE];
     char valor[MAXLINE];
 
-    printf("**Loading das configurações inciais!**\n\n");
+    printf("**Loading das configurações inciais**\n");
 
     FILE *fpConfig = fopen("simulador_config_inicial.txt", "r"); // Abrir para ler o ficheiro de configuração incial da discoteca
 
@@ -103,7 +107,7 @@ void lerConfigInicial()
         if (strcmp(nome, "prob_ser_expulso") == 0)
             disco.prob_ser_expulso = atoi(valor);
     }
-
+    printf("**Loading Completo**\n\n");
     fclose(fpConfig);
 }
 
@@ -119,7 +123,7 @@ void logInicialDisco() // Escreve no ficheiro de LOGS da simulação
     else
     {
         fprintf(fpLog, "!------ LOGS DA SIMULAÇÃO ------!\n\n"); // escreve no ficheiro de logs do simulador
-        fprintf(fpLog, "***Configuração Inicial da Discoteca***\n");
+        fprintf(fpLog, "**Configuração Inicial da Discoteca**\n");
     }
 
     // Escreves nos logs do simulador os dados internos inciais da simulação
@@ -150,7 +154,7 @@ void logInicialDisco() // Escreve no ficheiro de LOGS da simulação
     fprintf(fpLog, "Probabilidade de ser expluso: %d\n", disco.prob_ser_expulso);
 
     // Acontecimentos da simulação
-    fprintf(fpLog, "\n****Acontecimentos da simulação***\n"
+    fprintf(fpLog, "\n**Acontecimentos da simulação**\n"
                    "60 : Abertura da Discoteca\n"
                    "69 : Encerramento da Discoteca\n\n"
                    "00 : Entrada para a Discoteca\n"
@@ -177,7 +181,7 @@ void logInicialDisco() // Escreve no ficheiro de LOGS da simulação
 
 void printInicialDisco()
 { // Faz um print do estado inicial da discoteca no ecrã da simulação
-    printf("***Configuração Inicial da Discoteca***\n");
+    printf("**Configuração Inicial da Discoteca**\n");
 
     printf("Numero de zonas na discoteca: %d\n", disco.n_zonas);
     printf("Nome da zona 0: %s\n", disco.z0_nome); // Nomes das zonas
@@ -206,7 +210,7 @@ void printInicialDisco()
     printf("Probabilidade de ser expluso: %d\n", disco.prob_ser_expulso);
 
     // Acontecimentos da simulação
-    printf("\n****Acontecimentos da simulação***\n"
+    printf("\n**Acontecimentos da simulação**\n"
            "60 : Abertura da Discoteca\n"
            "69 : Encerramento da Discoteca\n\n"
            "00 : Entrada para a Discoteca\n"
@@ -227,6 +231,21 @@ void printInicialDisco()
            "32 : Saída - Zona VIP\n"
            "33 : Saída- WC\n"
            "34 : Saída - restaurante\n");
+}
+
+void *rotinaCliente(void *ptr)
+{
+    // Identificar o cliente;
+    struct cliente *cliente;
+    cliente = (struct cliente *)ptr;
+
+    // Probabilidade de ser VIP
+    cliente->vip = rand() % disco.prob_ser_vip;
+    if (rand() % 100 + 1 <= disco.prob_ser_vip) // random de 1-100 for <= prob_ser_vip, então é vip
+        cliente->vip = 1;                       // VIP
+    else
+        cliente->vip = 0; // NO VIP
+    printf("Iniciei rotina, Sou o clinete de ID: %d,VIP:%d\n", cliente->id_cliente, cliente->vip);
 }
 
 int main(void)
@@ -264,13 +283,31 @@ int main(void)
     logInicialDisco();   // LOGS - Escreve nos logs do simulador o estado incial da discoteca
     printInicialDisco(); // ECRÂ SIMULAÇÂO - Print do estado incial da discoteca
 
-    
-    //Inicializar os Semáforos
+    // Inicializar os Semáforos
 
+    // Esperar iniciar simulação
+    printf("Esperando para començar a simulação...\n");
+    /*
+    while (inciciarSimulacao == 0)
+    {
+        printf("Esperando..");
+    }*/
 
-    //Iniciar Simulação
-    
-    
+    // Criação das tarefas
+    int i = 0;
+    for (i = 0; i < capacidadeDisco; i++) // capacidadeDisco é de 500
+    {
+        usleep(1000000); // generates 1 second delay
+        if (pthread_create(&(threads[i]), NULL, *rotinaCliente, &thread_array[i]) != 0)
+        {
+            printf("Erro ao criar o cliente com o id:%d", i);
+            return 0;
+        }
+        thread_array[i].id_cliente = i + 1; // i=0, id=1
+    }
+
+    // pthread_cancel() para fechar os threads?
+
     /*______________________AQUI ACABA O NOSSO TABALHO______________________*/
 
     /* Envia as linhas lidas do teclado para o socket */

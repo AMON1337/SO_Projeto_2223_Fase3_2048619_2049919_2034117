@@ -1,7 +1,7 @@
 #include "unix.h" //Tem as bibliotecas comuns do projeto
 #define MAXLINE 512
 
-//  Usamos os sockets dados nas aulas.
+// Usamos os sockets dados nas aulas.
 
 /* Servidor do tipo socket stream.
    Manda linhas recebidas de volta para o cliente */
@@ -30,12 +30,34 @@ str_echo(sockfd) int sockfd;
         switch (opcao)
         {
         case 'y':
+        /*
+            // Envia opçao para o simulador para começar simulação
+            n = strlen(opcao);
+            if (n == 0)
+                return;
+            else if (n < 0)
+                err_dump("str_echo: readline error");
+
+            if (writen(sockfd, opcao, n) != n)
+                err_dump("str_echo: writen error");
+            */
             printf("\nSimulação Iniciada!\n");
-            menu = 1;
+            menu = 1; // Sai do menu
             break;
         case 'Y':
-            printf("\nSimulação Iniciada!\n");
-            menu = 1;
+        /*
+            // Envia opçao para o simulador para começar simulação
+            n = strlen(opcao);
+            if (n == 0)
+                return;
+            else if (n < 0)
+                err_dump("str_echo: readline error");
+
+            if (writen(sockfd, opcao, n) != n)
+                err_dump("str_echo: writen error");
+
+            printf("\nSimulação Iniciada!\n");*/
+            menu = 1; // Sai do menu
             break;
         case 'n':
             printf("\nFechando ligação com o simulador atual!\n");

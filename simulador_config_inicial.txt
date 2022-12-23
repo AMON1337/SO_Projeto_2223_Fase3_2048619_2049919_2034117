@@ -15,5 +15,5 @@ z2_fila_max : 5
 z3_fila_max : 15
 z4_fila_max : 0
 prob_desistir_fila : 40
-prob_ser_vip : 15
+prob_ser_vip : 20
 prob_ser_expulso : 1

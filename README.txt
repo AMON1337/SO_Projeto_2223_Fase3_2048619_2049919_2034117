@@ -1,3 +1,5 @@
+ **NOTA** ALTEREI A CHANCE DE SER VIP de 15 para 20!!
+
 Projeto SO 22/23 Simulação de uma discoteca!
 Alunos: 
 Filipe Lopes - 2048619
