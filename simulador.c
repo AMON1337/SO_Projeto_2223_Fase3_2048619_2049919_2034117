@@ -48,6 +48,11 @@ int capacidadeDisco = 500; // Utilizado para criar tarefas no int main();
 
 int inciciarSimulacao = 0; // 0 - Espera pelo monitor iniciar, 1 - O monitor deu sinal iniciar
 
+// Ler mensagem do Servidor para iniciar/fechar simulação
+int n;                // Número de caracteres
+char buffer[MAXLINE]; // Iniciar/Fechar Simulação
+int valor;            // Comparar buffer com string
+
 void lerConfigInicial()
 {
     char nome[MAXLINE];
@@ -279,15 +284,34 @@ int main(void)
     printf("Simulador ONLINE\n\n"); //
 
     // Esperar iniciar simulação
-    printf("Esperando para començar a simulação...\n");
-    while (inciciarSimulacao == 0)
+    printf("Esperando para começar a simulação...\n");
+
+    bzero(buffer, MAXLINE);            // Limpar Buffer
+    n = read(sockfd, buffer, MAXLINE); // Esperar Mensagem do Monitor
+    if (n < 0)
     {
+        perror("Erro ao ler mensagem enviada do servidor!\n");
+        exit(1);
     }
+
+    valor = strcmp(buffer, "INICIAR"); // Comparar o buffer com INICIAR
+    if (valor == 0)
+    { // Buffer é igual a INICIAR
+        printf("Iniciando a Simulação!\n");
+        usleep(3000000); // generates 3 second delay
+    }
+    else
+    { // Buffer é igual a FECHAR
+        printf("Cancelando Simulação!\n");
+        close(sockfd);
+        exit(0);
+    }
+    // Fim da espera para iniciara simulação
 
     lerConfigInicial(); // Lê do ficheiro incial a configuração inicial
 
     logInicialDisco();   // LOGS - Escreve nos logs do simulador o estado incial da discoteca
-    printInicialDisco(); // ECRÂ SIMULAÇÂO - Print do estado incial da discoteca
+    printInicialDisco(); // ECRÃ da SIMULAÇÃO - Print do estado incial da discoteca
 
     // Inicializar os Semáforos
 
@@ -309,7 +333,7 @@ int main(void)
     /*______________________AQUI ACABA O NOSSO TABALHO______________________*/
 
     /* Envia as linhas lidas do teclado para o socket */
-    str_cli(stdin, sockfd); // Socket
+    str_cli(stdin, sockfd); // Socket  <----- APAGAR ISTO
     /* Fecha o socket e termina */
     close(sockfd);
     exit(0);

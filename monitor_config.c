@@ -31,19 +31,24 @@ str_echo(sockfd) int sockfd;
         {
         case 'y':
             printf("\nSimulação Iniciada!\n");
+            n = write(sockfd, "INICIAR", MAXLINE);
             menu = 1; // Sai do menu
             break;
         case 'Y':
+            printf("\nSimulação Iniciada!\n");
             menu = 1; // Sai do menu
+            n = write(sockfd, "INICIAR", MAXLINE);
             break;
         case 'n':
             printf("\nFechando ligação com o simulador atual!\n");
+            n = write(sockfd, "FECHAR", MAXLINE);
             close(sockfd);
             printf("\nEsperando nova ligação...\n");
             exit(0);
             break;
         case 'N':
             printf("\nFechando ligação com o simulador atual!\n");
+            n = write(sockfd, "FECHAR", MAXLINE);
             close(sockfd);
             printf("\nEsperando nova ligação...\n");
             exit(0);
