@@ -58,13 +58,13 @@ void lerConfigInicial()
     char nome[MAXLINE];
     char valor[MAXLINE];
 
-    printf("**Loading das configurações inciais**\n");
+    printf("**Loading das configurações iniciais**\n");
 
     FILE *fpConfig = fopen("simulador_config_inicial.txt", "r"); // Abrir para ler o ficheiro de configuração incial da discoteca
 
     if (fpConfig == NULL)
     {
-        printf("Ocorreu um problema ao abrir o ficheiro com a configuração incicial!\nImpossível continuar!\n");
+        printf("Ocorreu um problema ao abrir o ficheiro com a configuração inicial!\nImpossível continuar!\n");
 
         return;
     }
@@ -238,6 +238,7 @@ void printInicialDisco()
            "34 : Saída - restaurante\n");
 }
 
+// Rotina do Cliente na discoteca
 void *rotinaCliente(void *ptr)
 {
     // Identificar o cliente;
@@ -245,12 +246,12 @@ void *rotinaCliente(void *ptr)
     cliente = (struct cliente *)ptr;
 
     // Probabilidade de ser VIP
-    cliente->vip = rand() % disco.prob_ser_vip;
     if (rand() % 100 + 1 <= disco.prob_ser_vip) // random de 1-100 for <= prob_ser_vip, então é vip
-        cliente->vip = 1;                       // VIP
+        cliente->vip = 1;                       // YES VIP
     else
         cliente->vip = 0; // NO VIP
-    printf("Iniciei rotina, Sou o clinete de ID: %d,VIP:%d\n", cliente->id_cliente, cliente->vip);
+
+    printf("Iniciei rotina, Sou o cliente de ID: %d,VIP:%d\n", cliente->id_cliente, cliente->vip); // Temporário
 }
 
 int main(void)
@@ -298,7 +299,7 @@ int main(void)
     if (valor == 0)
     { // Buffer é igual a INICIAR
         printf("Iniciando a Simulação!\n");
-        usleep(3000000); // generates 3 second delay
+        // usleep(3000000); // generates 3 second delay     <--- Descomentar isto
     }
     else
     { // Buffer é igual a FECHAR
@@ -306,8 +307,11 @@ int main(void)
         close(sockfd);
         exit(0);
     }
-    // Fim da espera para iniciara simulação
 
+    // Let's make random, Random again :)
+    srand(time(0));
+
+    // COnfiguração Inicial
     lerConfigInicial(); // Lê do ficheiro incial a configuração inicial
 
     logInicialDisco();   // LOGS - Escreve nos logs do simulador o estado incial da discoteca
@@ -315,11 +319,12 @@ int main(void)
 
     // Inicializar os Semáforos
 
-    // Criação das tarefas
+    // Criação das tarefas (clientes)
     int i = 0;
     for (i = 0; i < capacidadeDisco; i++) // capacidadeDisco é de 500
     {
-        usleep(1000000); // generates 1 second delay
+        // usleep(1000000); // generates 1 second delay
+        usleep(100); // Torna a simulação + rápida, alterar no futuro
         if (pthread_create(&(threads[i]), NULL, *rotinaCliente, &thread_array[i]) != 0)
         {
             printf("Erro ao criar o cliente com o id:%d", i);
