@@ -3,25 +3,27 @@
 #include <time.h>      //Tempo da simulação
 #include <semaphore.h> //Usar semaforos
 
-// Comunicação com o Monitor
+// Comunicação com o Monitor //
 #define MAXLINE 512 // Tamanho da Mensagem
 
 /* Cria socket stream */
 int sockfd, servlen;
 struct sockaddr_un serv_addr;
-// ^Necessário para a ciração do canal de comunicação com o monitor ^
+
 // Ler mensagem do Monitor para iniciar/fechar simulação
 int n;                // Número de caracteres
 char buffer[MAXLINE]; // Iniciar/Fechar Simulação
 int valor;            // Comparar buffer com string
 
-// Sincronização
+// Sincronização //
+// pthread_mutex_t mutex_wc;
+
 sem_t sem_EnviarAcontMonitor; // Semaforo para o envio de uma mensagem para o monitor, só pode ser enviado uma mensagem de cada vez, iniciado a 1
 
 sem_t sem_FilaEntradaDisco; // Semaforo da fila deentrada na discoteca
 sem_t sem_Discoteca;        // Semaforo das pessoas que estão dentro da discoteca
 
-// Estruturas de dados
+// Estruturas de dados //
 typedef struct cliente
 {                      // tarefa = cliente
     int id_cliente;    // ID do cliente
@@ -60,6 +62,24 @@ struct cliente thread_array[500]; // Serão criados 500 tarefas/clientes
 pthread_t threads[500]; // Serão criados 500 tarefas/clientes
 
 int capacidadeDisco = 500; // Utilizado para criar tarefas no int main();
+
+// Tarefa para abrir/fechar a discoteca //
+typedef struct horarioDiscoteca
+{
+    int abrirDiscoteca;  // Tempo para abrir a discoteca
+    int fecharDiscoteca; // Tempo para fechar a discoteca
+};
+
+struct horarioDiscoteca horarioDiscoteca;
+pthread_t abrirFecharDisco;
+
+int discotecaAberta = 0;  // 0 Disco fechado, 1 disco Aberto
+int tempoDiscoAbre = 5;   // A Disco abre 5s depois da simulação começar
+int tempoDiscoFecha = 65; // A disco fecha 65s depois da simulação começar
+//  Nota: 65-5 = 60s que discoteca fica aberta ao público
+
+// Tempo - usamos como referencia para os acontecimentos da simulação
+struct timespec ts;
 
 // Lê a configuração inicial de um ficheiro .txt
 void lerConfigInicial()
@@ -292,25 +312,70 @@ void *rotinaCliente(void *ptr)
     else
         cliente->vip = 0; // NO VIP
 
-    printf("Iniciei rotina, Sou o cliente de ID: %d,VIP:%d\n", cliente->id_cliente, cliente->vip); // Temporário
-    
+    printf("Iniciei rotina, sou o cliente de ID: %d,VIP:%d\n", cliente->id_cliente, cliente->vip); // Temporário
+
     // Entra na fila para a discoteca
     sem_wait(&sem_FilaEntradaDisco); // Entra na fila de espera
-    cliente->acontecimento = 10;     // Espera na fila para entrar para a discoteca
 
-    // teste
-    cliente->tempo = 1111; // TESTE
-
+    cliente->acontecimento = 10; // Acontecimento: Espera na fila para entrar para a discoteca
+    timespec_get(&ts, TIME_UTC); // Pega no tempo atual e guarda no cliente
+    cliente->tempo = ts.tv_sec;
     enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
     // printf("Sou o cliente de ID: %d, e entrei na discoteca\n", cliente->id_cliente); //TESTE
-    usleep(1000000);
+    usleep(1000000); // Espera 1s
 
-    sem_wait(&sem_Discoteca);    // Tenta entrar na discoteca
-    cliente->acontecimento = 00; // Entra com sucesso na discoteca
+    // Enquanto a discoteca estiver fechada, espera que ela abra
+    while (discotecaAberta == 0)
+    {
+    }
+
+    sem_wait(&sem_Discoteca);        // Tenta entrar na discoteca, quando conseugue entrar,
+    sem_post(&sem_FilaEntradaDisco); // sai da fila de entrada
+
+    cliente->acontecimento = 00; // Acontecimento: Entra com sucesso na discoteca
+    timespec_get(&ts, TIME_UTC); // Pega no tempo atual e guarda no cliente
+    cliente->tempo = ts.tv_sec;
     enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
-    sem_post(&sem_FilaEntradaDisco); // Sái da fila de entrada
 
-    usleep(10000000); // ESPERA <--- TESTE
+    usleep(15000000); // Espera 15s
+
+    // TESTE:
+    sem_post(&sem_Discoteca);    // sai da fila de entrada
+    cliente->acontecimento = 30; // Acontecimento: Entra com sucesso na discoteca
+    timespec_get(&ts, TIME_UTC); // Pega no tempo atual e guarda no cliente
+    cliente->tempo = ts.tv_sec;
+    enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+}
+
+void *RotinaAbrirDiscoteca(void *ptr)
+{
+    // Identificar o EstadoInterno da Discoteca;
+    struct horarioDiscoteca *horarioDiscoteca;
+    horarioDiscoteca = (struct horarioDiscoteca *)ptr;
+
+    printf("Discoteca esta fechada ao iniciar a simulação!");
+
+    // Defenir tempo para começar e fechar simulação
+    timespec_get(&ts, TIME_UTC);
+    horarioDiscoteca->abrirDiscoteca = ts.tv_sec + tempoDiscoAbre;   // Abrir a Discoteca em 10 apartir de agora
+    horarioDiscoteca->fecharDiscoteca = ts.tv_sec + tempoDiscoFecha; // Fechar a Discoteca em 70 segundos apartir de agora
+    // Discoteca aberta 60 segundos, 1 minutos
+    while (ts.tv_sec < horarioDiscoteca->abrirDiscoteca)
+    {
+        timespec_get(&ts, TIME_UTC);
+    }
+    discotecaAberta = 1;                      // abre a discoteca
+    enviarAcontecimento(0, 60, ts.tv_sec, 1); // Envia o acontecimento de abrir a discoteca id_cliente 0 é o manager
+    printf("Discoteca abriu as portas ao público! :)");
+
+    while (ts.tv_sec < horarioDiscoteca->fecharDiscoteca)
+    {
+        timespec_get(&ts, TIME_UTC);
+    }
+    discotecaAberta = 0;                      // fecha discoteca
+    enviarAcontecimento(0, 69, ts.tv_sec, 1); // Envia o acontecimento de abrir a discoteca id_cliente 0 é o manager
+    printf("Discoteca fechou as portas ao público! :(");
 }
 
 int main(void)
@@ -375,10 +440,27 @@ int main(void)
     // Fim da espera para iniciar simulação
 
     // ---> Inicializar os Semáforos <--- // Segundo argumento sem_init a 0, significa que é partilhado entre tarefas
+
     sem_init(&sem_EnviarAcontMonitor, 0, 1); // Iniciado a 1, exclusão mútua, só uma tarefa é que envia de cada vez o aconteciemento ao monitor
 
+    // Discoteca - Z0 (Zona 0)
     sem_init(&sem_FilaEntradaDisco, 0, disco.z0_fila_max); // Semaforo para a fila da entrada da disco
     sem_init(&sem_Discoteca, 0, disco.z0_max);             // Semaforo para a capacida máxima da discoteca
+
+    // Pista Pública - Z1 (Zona 1)
+
+    // Zona Vip - Z2 (Zona 2)
+
+    // WC - Z3 (Zona 3)
+
+    // Restaurante - Z4 (Zona 4)
+
+    // Criar Tarefa abrir fechar a discoteca
+    if (pthread_create(&(abrirFecharDisco), NULL, *RotinaAbrirDiscoteca, &horarioDiscoteca) != 0)
+    {
+        printf("Erro ao criar a tarefa que controla a abertura e fecho da discoteca");
+        return 0;
+    }
 
     // Criação das tarefas (clientes)
     int i = 0;                            // Número de tarefas criadas
