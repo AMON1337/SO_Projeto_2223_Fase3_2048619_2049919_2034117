@@ -1,5 +1,5 @@
 n_zonas : 5
-z0_nome : entrada
+z0_nome : discoteca
 z1_nome : pista_publica
 z2_nome : zona_vip
 z3_nome : wc

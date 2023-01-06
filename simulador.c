@@ -5,13 +5,15 @@
 
 // Comunicação com o Monitor
 #define MAXLINE 512 // Tamanho da Mensagem
-// Ler mensagem do Servidor para iniciar/fechar simulação
+// Ler mensagem do Monitor para iniciar/fechar simulação
 int n;                // Número de caracteres
 char buffer[MAXLINE]; // Iniciar/Fechar Simulação
 int valor;            // Comparar buffer com string
-
+int sockfd;           // Ligação com o Monitor
 // Sincronização
-// AQUI
+sem_t semEnviarAcontMonitor; // Semaforo para o envio de uma mensagem para o monitor, só pode ser enviado uma mensagem de cada vez, iniciado a 1
+
+sem_t semEntradaDisco; // Semaforo da entrada na discoteca
 
 // Estruturas de dados
 typedef struct cliente
@@ -128,7 +130,7 @@ void logInicialDisco() // Escreve no ficheiro de LOGS da simulação
     else
     {
         fprintf(fpLog, "!------ LOGS DA SIMULAÇÃO ------!\n\n"); // escreve no ficheiro de logs do simulador
-        fprintf(fpLog, "**Configuração Inicial da Discoteca**\n");
+        fprintf(fpLog, "*--Configuração Inicial da Discoteca--*\n");
     }
 
     // Escreves nos logs do simulador os dados internos inciais da simulação
@@ -159,7 +161,7 @@ void logInicialDisco() // Escreve no ficheiro de LOGS da simulação
     fprintf(fpLog, "Probabilidade de ser expluso: %d\n", disco.prob_ser_expulso);
 
     // Acontecimentos da simulação
-    fprintf(fpLog, "\n**Acontecimentos da simulação**\n"
+    fprintf(fpLog, "\n*--Acontecimentos da simulação--*\n"
                    "60 : Abertura da Discoteca\n"
                    "69 : Encerramento da Discoteca\n\n"
                    "00 : Entrada para a Discoteca\n"
@@ -181,13 +183,16 @@ void logInicialDisco() // Escreve no ficheiro de LOGS da simulação
                    "33 : Saída- WC\n"
                    "34 : Saída - restaurante\n");
 
+    // Preparar para receber os Acontecimentos da simulação:
+    fprintf(fpLog, "\n\n* <---> ACONTECIMENTOS DA SIMULAÇÃO <---> *\n\n");
+
     fclose(fpLog);
 }
 
 // Faz um print do estado inicial da discoteca no ecrã da simulação
 void printInicialDisco()
 {
-    printf("**Configuração Inicial da Discoteca**\n");
+    printf("*--Configuração Inicial da Discoteca--*\n");
 
     printf("Numero de zonas na discoteca: %d\n", disco.n_zonas);
     printf("Nome da zona 0: %s\n", disco.z0_nome); // Nomes das zonas
@@ -216,7 +221,7 @@ void printInicialDisco()
     printf("Probabilidade de ser expluso: %d\n", disco.prob_ser_expulso);
 
     // Acontecimentos da simulação
-    printf("\n**Acontecimentos da simulação**\n"
+    printf("\n*--Acontecimentos da simulação--*\n"
            "60 : Abertura da Discoteca\n"
            "69 : Encerramento da Discoteca\n\n"
            "00 : Entrada para a Discoteca\n"
@@ -239,6 +244,32 @@ void printInicialDisco()
            "34 : Saída - restaurante\n");
 }
 
+// Envia o acontecimento para o Monitor/ Escreva na logSimulador e print no ecrã do simulador
+void enviarAcontecimento(int id_cliente, int acontecimento, int tempo, int vip)
+{
+
+    sem_wait(&semEnviarAcontMonitor); // Semaforo de exlusão mútua
+    // Envia Acontecimento para o Monitor
+    bzero(buffer, MAXLINE);                                                  // limpa buffer
+    sprintf(buffer, "%d.%d.%d.%d\n", id_cliente, acontecimento, tempo, vip); // Coloca mensagem no buffer
+
+    // str_cli(buffer, sockfd); // Envia a mensagem <-- tenho que alterar isto!
+
+    // Escreve o Acontecimento no logSimulador.log
+    FILE *fpLog = fopen("logSimulador.log", "w"); // Abrir e/ou criar o ficheiro logs para escrever
+    if (fpLog == NULL)
+    {
+        printf("Ocorreu um problema ao abrir o ficheiro de logs!\nImpossível continuar!\n");
+        return;
+    }
+    fprintf(fpLog, "Cliente ID: %d, Acontecimento: %d, Tempo: %d, VIP: %d\n", id_cliente, acontecimento, tempo, vip);
+    fclose(fpLog);
+    // Print no ecrâ no simulador o acontecimento
+    printf("Cliente ID: %d, Acontecimento: %d, Tempo: %d, VIP: %d\n", id_cliente, acontecimento, tempo, vip);
+
+    sem_post(&semEnviarAcontMonitor); //
+}
+
 // Rotina do Cliente na discoteca
 void *rotinaCliente(void *ptr)
 {
@@ -252,7 +283,19 @@ void *rotinaCliente(void *ptr)
     else
         cliente->vip = 0; // NO VIP
 
-    printf("Iniciei rotina, Sou o cliente de ID: %d,VIP:%d\n", cliente->id_cliente, cliente->vip); // Temporário
+    // printf("Iniciei rotina, Sou o cliente de ID: %d,VIP:%d\n", cliente->id_cliente, cliente->vip); // Temporário
+
+    // Entra na fila para a discoteca
+    sem_wait(&semEntradaDisco);  // Se estiver espaço entra na fila
+    cliente->acontecimento = 10; // Espera na fila para entrar para a discoteca
+
+    // teste
+    cliente->tempo = 1111; // TESTE
+
+    enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+    // printf("Sou o cliente de ID: %d, e entrei na discoteca\n", cliente->id_cliente); //TESTE
+
+    sem_post(&semEntradaDisco); // TESTE
 }
 
 int main(void)
@@ -267,32 +310,41 @@ int main(void)
 
     /* Primeiro uma limpeza preventiva!
        Dados para o socket stream: tipo + nome do ficheiro.
-         O ficheiro identifica o servidor */
+         O ficheiro identifica o monitor */
 
     bzero((char *)&serv_addr, sizeof(serv_addr));
     serv_addr.sun_family = AF_UNIX;
     strcpy(serv_addr.sun_path, UNIXSTR_PATH);
     servlen = strlen(serv_addr.sun_path) + sizeof(serv_addr.sun_family);
 
-    /* Tenta estabelecer uma ligação. Só funciona se o servidor tiver
-         sido lançado primeiro (o servidor tem de criar o ficheiro e associar
+    /* Tenta estabelecer uma ligação. Só funciona se o monitor tiver
+         sido lançado primeiro (o monitor tem de criar o ficheiro e associar
          o socket ao ficheiro) */
 
     if (connect(sockfd, (struct sockaddr *)&serv_addr, servlen) < 0)
         err_dump("O Simulador não consegue ligar-se ao Monitor!\n");
 
     /*______________________AQUI COMEÇA O NOSSO TRABALHO______________________*/
-    system("clear"); //Limpar consola
-    printf("Simulador ONLINE\n\n"); 
+    system("clear"); // Limpar consola
+    printf("Simulador ONLINE\n\n");
+
+    // Let's make random, Random again :)
+    srand(time(0));
+
+    // Configuração Inicial
+    lerConfigInicial(); // Lê do ficheiro incial a configuração inicial
+
+    logInicialDisco();   // LOGS - Escreve nos logs do simulador o estado incial da discoteca
+    printInicialDisco(); // ECRÃ da SIMULAÇÃO - Print do estado incial da discoteca
 
     // Esperar iniciar simulação
-    printf("Esperando para começar a simulação...\n");
+    printf("\n\nEsperando para começar a simulação...\n");
 
     bzero(buffer, MAXLINE);            // Limpar Buffer
     n = read(sockfd, buffer, MAXLINE); // Esperar Mensagem do Monitor
     if (n < 0)
     {
-        perror("Erro ao ler mensagem enviada do servidor!\n");
+        perror("Erro ao ler mensagem enviada do Monitor\n");
         exit(1);
     }
 
@@ -310,16 +362,11 @@ int main(void)
     }
     // Fim da espera para iniciar simulação
 
-    // Let's make random, Random again :)
-    srand(time(0));
+    // ---> Inicializar os Semáforos <---
+    // Segundo argumento sem_init a 0, significa que é partilhado entre tarefas
+    sem_init(&semEnviarAcontMonitor, 0, 1); // Iniciado a 1, exclusão mútua, só uma tarefa é que envia de cada vez o aconteciemento ao monitor
 
-    // Configuração Inicial
-    lerConfigInicial(); // Lê do ficheiro incial a configuração inicial
-
-    logInicialDisco();   // LOGS - Escreve nos logs do simulador o estado incial da discoteca
-    printInicialDisco(); // ECRÃ da SIMULAÇÃO - Print do estado incial da discoteca
-
-    // Inicializar os Semáforos
+    sem_init(&semEntradaDisco, 0, disco.z0_fila_max); // Semaforo para a fila da entrada da disco
 
     // Criação das tarefas (clientes)
     int i = 0;                            // Número de tarefas criadas
@@ -336,6 +383,30 @@ int main(void)
     }
 
     // pthread_cancel() para fechar os threads?
+
+    // Menu sair do simulador! - Testar melhor
+    /*
+    printf("\nFim da simulação!\n");
+    printf("Pode analisar os dados da simulação no monitor ou nos ficheiros .log criados!\n");
+    printf("\nDeseja Sair?\ny - sim\n");
+
+    while (1)
+    {
+        char opcao;
+        scanf("%c", &opcao);
+        switch (opcao)
+        {
+        case 'y':
+            close(sockfd);
+            exit(0);
+            break;
+        case 'Y':
+            close(sockfd);
+            exit(0);
+            break;
+        }
+    }
+    */
 
     /*______________________AQUI ACABA O NOSSO TABALHO______________________*/
 

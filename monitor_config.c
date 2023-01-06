@@ -70,7 +70,7 @@ str_echo(sockfd) int sockfd;
         system("clear"); // Limpar Monitor anterior
         printf(" ________________________________________ \n");
         printf("(_______________INFORMAÇÃO_______________)\n");
-        printf("( Entrada: #x         Fila: #y           )\n");
+        printf("( Discoteca: #x       Fila: #y           )\n");
         printf("(                                        )\n");
         printf("( Pista Publica: #x   Fila: #y           )\n");
         printf("(                                        )\n");
@@ -95,8 +95,10 @@ str_echo(sockfd) int sockfd;
 
         /* Manda linha de volta para o socket. n conta com
            o \0 da string, caso contrário perdia-se sempre
-           um caracter! */
+           um caracter!*/
+        /* FUNCIONALIDADE ANTIGA, ENVIA DE VOLTA a mesnagem recebida
         if (writen(sockfd, line, n) != n)
             err_dump("str_echo: writen error");
+        */
     }
 }
