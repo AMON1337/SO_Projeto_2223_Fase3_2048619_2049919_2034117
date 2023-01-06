@@ -5,15 +5,21 @@
 
 // Comunicação com o Monitor
 #define MAXLINE 512 // Tamanho da Mensagem
+
+/* Cria socket stream */
+int sockfd, servlen;
+struct sockaddr_un serv_addr;
+// ^Necessário para a ciração do canal de comunicação com o monitor ^
 // Ler mensagem do Monitor para iniciar/fechar simulação
 int n;                // Número de caracteres
 char buffer[MAXLINE]; // Iniciar/Fechar Simulação
 int valor;            // Comparar buffer com string
-int sockfd;           // Ligação com o Monitor
-// Sincronização
-sem_t semEnviarAcontMonitor; // Semaforo para o envio de uma mensagem para o monitor, só pode ser enviado uma mensagem de cada vez, iniciado a 1
 
-sem_t semEntradaDisco; // Semaforo da entrada na discoteca
+// Sincronização
+sem_t sem_EnviarAcontMonitor; // Semaforo para o envio de uma mensagem para o monitor, só pode ser enviado uma mensagem de cada vez, iniciado a 1
+
+sem_t sem_FilaEntradaDisco; // Semaforo da fila deentrada na discoteca
+sem_t sem_Discoteca;        // Semaforo das pessoas que estão dentro da discoteca
 
 // Estruturas de dados
 typedef struct cliente
@@ -250,12 +256,12 @@ void printInicialDisco()
 void enviarAcontecimento(int id_cliente, int acontecimento, int tempo, int vip)
 {
 
-    sem_wait(&semEnviarAcontMonitor); // Semaforo de exlusão mútua
+    sem_wait(&sem_EnviarAcontMonitor); // Semaforo de exlusão mútua, só pode ser enviado um acontecimento de cada vez
     // Envia Acontecimento para o Monitor
-    bzero(buffer, MAXLINE);                                                  // limpa buffer
-    sprintf(buffer, "%d.%d.%d.%d\n", id_cliente, acontecimento, tempo, vip); // Coloca mensagem no buffer
+    bzero(buffer, MAXLINE);                                                  // limpa o buffer
+    sprintf(buffer, "%d.%d.%d.%d\n", id_cliente, acontecimento, tempo, vip); // coloca mensagem no buffer
 
-    // str_cli(buffer, sockfd); // Envia a mensagem <-- tenho que alterar isto!
+    str_cli(buffer, sockfd); // Envia a mensagem <-- tenho que alterar isto!
 
     // Escreve o Acontecimento no logSimulador.log
     FILE *fpLog = fopen("logSimulador.log", "a+"); // Abrir e/ou criar o ficheiro logs para escrever
@@ -266,10 +272,11 @@ void enviarAcontecimento(int id_cliente, int acontecimento, int tempo, int vip)
     }
     fprintf(fpLog, "Cliente ID: %d, Acontecimento: %d, Tempo: %d, VIP: %d\n", id_cliente, acontecimento, tempo, vip);
     fclose(fpLog);
+
     // Print no ecrâ no simulador o acontecimento
     printf("Cliente ID: %d, Acontecimento: %d, Tempo: %d, VIP: %d\n", id_cliente, acontecimento, tempo, vip);
 
-    sem_post(&semEnviarAcontMonitor); //
+    sem_post(&sem_EnviarAcontMonitor); // Assinala o semaforo para a próxima tarefa
 }
 
 // Rotina do Cliente na Discoteca
@@ -285,26 +292,29 @@ void *rotinaCliente(void *ptr)
     else
         cliente->vip = 0; // NO VIP
 
-    // printf("Iniciei rotina, Sou o cliente de ID: %d,VIP:%d\n", cliente->id_cliente, cliente->vip); // Temporário
-
+    printf("Iniciei rotina, Sou o cliente de ID: %d,VIP:%d\n", cliente->id_cliente, cliente->vip); // Temporário
+    
     // Entra na fila para a discoteca
-    sem_wait(&semEntradaDisco);  // Se estiver espaço entra na fila
-    cliente->acontecimento = 10; // Espera na fila para entrar para a discoteca
+    sem_wait(&sem_FilaEntradaDisco); // Entra na fila de espera
+    cliente->acontecimento = 10;     // Espera na fila para entrar para a discoteca
 
     // teste
     cliente->tempo = 1111; // TESTE
 
     enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
     // printf("Sou o cliente de ID: %d, e entrei na discoteca\n", cliente->id_cliente); //TESTE
+    usleep(1000000);
 
-    sem_post(&semEntradaDisco); // TESTE
+    sem_wait(&sem_Discoteca);    // Tenta entrar na discoteca
+    cliente->acontecimento = 00; // Entra com sucesso na discoteca
+    enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+    sem_post(&sem_FilaEntradaDisco); // Sái da fila de entrada
+
+    usleep(10000000); // ESPERA <--- TESTE
 }
 
 int main(void)
 {
-    int sockfd, servlen;
-    struct sockaddr_un serv_addr;
-
     /* Cria socket stream */
 
     if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
@@ -364,18 +374,18 @@ int main(void)
     }
     // Fim da espera para iniciar simulação
 
-    // ---> Inicializar os Semáforos <---
-    // Segundo argumento sem_init a 0, significa que é partilhado entre tarefas
-    sem_init(&semEnviarAcontMonitor, 0, 1); // Iniciado a 1, exclusão mútua, só uma tarefa é que envia de cada vez o aconteciemento ao monitor
+    // ---> Inicializar os Semáforos <--- // Segundo argumento sem_init a 0, significa que é partilhado entre tarefas
+    sem_init(&sem_EnviarAcontMonitor, 0, 1); // Iniciado a 1, exclusão mútua, só uma tarefa é que envia de cada vez o aconteciemento ao monitor
 
-    sem_init(&semEntradaDisco, 0, disco.z0_fila_max); // Semaforo para a fila da entrada da disco
+    sem_init(&sem_FilaEntradaDisco, 0, disco.z0_fila_max); // Semaforo para a fila da entrada da disco
+    sem_init(&sem_Discoteca, 0, disco.z0_max);             // Semaforo para a capacida máxima da discoteca
 
     // Criação das tarefas (clientes)
     int i = 0;                            // Número de tarefas criadas
     for (i = 0; i < capacidadeDisco; i++) // Criar tarefas até capacidadeDisco (500)
     {
         // usleep(1000000); // generates 1 second delay
-        usleep(1000); // Torna a simulação + rápida, alterar no futuro
+        usleep(100000); // Torna a simulação + rápida, alterar no futuro
         if (pthread_create(&(threads[i]), NULL, *rotinaCliente, &thread_array[i]) != 0)
         {
             printf("Erro ao criar o cliente com o id:%d", i);
@@ -383,6 +393,10 @@ int main(void)
         }
         thread_array[i].id_cliente = i + 1; // i=0, id_cliente=1
     }
+
+    while (1)
+    {
+    } // Provisório só para manter a simulação a funcionar, depois de já ter criado os 500 clientes!
 
     // pthread_cancel() para fechar os threads?
 
@@ -413,7 +427,7 @@ int main(void)
     /*______________________AQUI ACABA O NOSSO TABALHO______________________*/
 
     /* Envia as linhas lidas do teclado para o socket */
-    str_cli(stdin, sockfd); // Socket  <----- APAGAR ISTO, Funcionalidade antiga
+    // str_cli(stdin, sockfd); // Socket  <----- APAGAR ISTO, Funcionalidade antiga
     /* Fecha o socket e termina */
     close(sockfd);
     exit(0);

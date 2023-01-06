@@ -27,7 +27,7 @@ int numZ4 = 0;
 int numFZ4 = 0;
 
 // Estado da Discoteca
-char estadoDisco[7] = "Fechado"; // Aberto ou Fechado
+char estadoDisco[8] = "Fechado"; // Aberto ou Fechado
 // Total de pessoas que já entraram na discoteca
 int totalDisco;
 // Total de pessoas que saíram da discoteca
@@ -44,7 +44,7 @@ int vip;
 str_echo(sockfd) int sockfd;
 {
     int n, i;
-    char line[MAXLINE];
+    char line[MAXLINE + 1]; // Linha de testo recebida com o acontecimento + info cliente
 
     // Menu de inicialização da simulação
     system("clear"); // limpar a consola
@@ -83,7 +83,7 @@ str_echo(sockfd) int sockfd;
             break;
         case 'N':
             printf("\nFechando ligação com o simulador atual!\n");
-            write(sockfd, "FECHAR", 7); // Envia msm para cancelar simu
+            write(sockfd, "FECHAR", 7); // Envia msm para cancelar simulação
             close(sockfd);
             printf("\nEsperando nova ligação...\n");
             exit(0);
@@ -127,6 +127,7 @@ str_echo(sockfd) int sockfd;
         printf("(________________________________________)\n");
 
         /* Lê uma linha do socket */ // Linha enviada do simulador
+        bzero(line, MAXLINE);        // Limpar Buffer
         n = readline(sockfd, line, MAXLINE);
         if (n == 0)
             return;
@@ -139,96 +140,80 @@ str_echo(sockfd) int sockfd;
         // Modificação do estado interno da discoteca
         switch (acontecimento)
         {
-
         case 60: // Abertura da Discoteca
-            estadoDisco[7] = '/0';
+            estadoDisco[8] = '/0';
             strcpy(estadoDisco, "Aberto");
             break;
-
         case 69: // Encerramento da Discoteca
-            estadoDisco[7] = '/0';
+            estadoDisco[8] = '/0';
             strcpy(estadoDisco, "Fechado");
             break;
-
         case 00: // Entrada para a Discoteca
             numFZ0--;
             numZ0++;
             totalDisco++;
             break;
-
         case 01: // Entrada pista de dança
             numFZ1--;
             numZ1++;
             break;
-
         case 02: // Entrada zona VIP
             numFZ2--;
             numZ2++;
             break;
-
         case 03: // Entrada na WC
             numFZ3--;
             numZ3++;
             break;
-
         case 04: // Entrada no restaurante
             numFZ4--;
             numZ4++;
             break;
-
         case 10: // Espera na fila - Discoteca
-            numZ0++;
+            numFZ0++;
             break;
-
         case 11: // Espera na fila - Pista de dança
-            numZ1++;
+            numFZ1++;
             break;
-
         case 12: // Espera na fila - Zona VIP
-            numZ2++;
+            numFZ2++;
             break;
-
         case 13: // Espera na fila - WC
-            numZ3++;
+            numFZ3++;
             break;
-
         case 20: // Desistência da fila - Discoteca
             numFZ0--;
             break;
-
         case 21: // Desistência da fila - Pista de Dança
             numFZ1--;
             break;
-
         case 22: // Desistência da fila - Zona VIP
             numFZ2--;
             break;
-
         case 23: // Desistência da fila - WC
             numFZ3--;
             break;
-
         case 30: // Saída - Discoteca
             numZ0--;
             saidaDisco++;
             break;
-
         case 31: // Saída - Pista de Dança
             numZ1--;
             break;
-
         case 32: // Saída - Zona VIP
             numZ2--;
             break;
-
         case 33: // Saída- WC
             numZ3--;
             break;
-
-        case 34: // Saída - restaurante
+        case 34: // Saída - Restaurante
             numZ4--;
             break;
-        default:
+        case 35: // Saída - Expulso da Discoteca
+            numZ0--;
+            saidaDisco++;
+            break;
+        default: // Outro Acontecimento // ERRO
             printf("ERRO: Acontecimento Inválido! \n");
             break;
         }
