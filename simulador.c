@@ -55,6 +55,7 @@ pthread_t threads[500]; // Serão criados 500 tarefas/clientes
 
 int capacidadeDisco = 500; // Utilizado para criar tarefas no int main();
 
+// Lê a configuração inicial de um ficheiro .txt
 void lerConfigInicial()
 {
     char nome[MAXLINE];
@@ -72,7 +73,7 @@ void lerConfigInicial()
     }
 
     // rewind(fpConfig); // Volta ao inicio do ficheiro para nova leitura
-    //  Obter as variáveis
+    // Obter as variáveis
     while (fscanf(fpConfig, "%s : %s", nome, valor) != EOF)
     {
         if (strcmp(nome, "n_zonas") == 0) // Números de zonas da discoteca
@@ -118,7 +119,8 @@ void lerConfigInicial()
     fclose(fpConfig);
 }
 
-void logInicialDisco() // Escreve no ficheiro de LOGS da simulação
+// Escreve no ficheiro de LOGS da simulação logSimulador.log
+void logInicialDisco()
 {
     FILE *fpLog = fopen("logSimulador.log", "w"); // Abrir e/ou criar o ficheiro logs para escrever
 
@@ -256,7 +258,7 @@ void enviarAcontecimento(int id_cliente, int acontecimento, int tempo, int vip)
     // str_cli(buffer, sockfd); // Envia a mensagem <-- tenho que alterar isto!
 
     // Escreve o Acontecimento no logSimulador.log
-    FILE *fpLog = fopen("logSimulador.log", "w"); // Abrir e/ou criar o ficheiro logs para escrever
+    FILE *fpLog = fopen("logSimulador.log", "a+"); // Abrir e/ou criar o ficheiro logs para escrever
     if (fpLog == NULL)
     {
         printf("Ocorreu um problema ao abrir o ficheiro de logs!\nImpossível continuar!\n");
@@ -270,7 +272,7 @@ void enviarAcontecimento(int id_cliente, int acontecimento, int tempo, int vip)
     sem_post(&semEnviarAcontMonitor); //
 }
 
-// Rotina do Cliente na discoteca
+// Rotina do Cliente na Discoteca
 void *rotinaCliente(void *ptr)
 {
     // Identificar o cliente;
@@ -344,7 +346,7 @@ int main(void)
     n = read(sockfd, buffer, MAXLINE); // Esperar Mensagem do Monitor
     if (n < 0)
     {
-        perror("Erro ao ler mensagem enviada do Monitor\n");
+        perror("Erro ao ler mensagem recebida do Monitor\n");
         exit(1);
     }
 
@@ -373,7 +375,7 @@ int main(void)
     for (i = 0; i < capacidadeDisco; i++) // Criar tarefas até capacidadeDisco (500)
     {
         // usleep(1000000); // generates 1 second delay
-        usleep(100); // Torna a simulação + rápida, alterar no futuro
+        usleep(1000); // Torna a simulação + rápida, alterar no futuro
         if (pthread_create(&(threads[i]), NULL, *rotinaCliente, &thread_array[i]) != 0)
         {
             printf("Erro ao criar o cliente com o id:%d", i);
