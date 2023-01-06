@@ -1,10 +1,45 @@
 #include "unix.h" //Tem as bibliotecas comuns do projeto
 #define MAXLINE 512
 
-// Usamos os sockets dados nas aulas.
+/* Monitor do tipo socket stream. */
 
-/* Servidor do tipo socket stream.
-   Manda linhas recebidas de volta para o cliente */
+// Variáveis monitor
+// Número atual de pessoas na zona(Z) ou na fila da zona(FZ)
+
+// Z0 - Discoteca
+int numZ0 = 0;
+int numFZ0 = 0;
+
+// Z1 - Pista pública
+int numZ1 = 0;
+int numFZ1 = 0;
+
+// Z2 - Zona VIP
+int numZ2 = 0;
+int numFZ2 = 0;
+
+// Z3 - WC
+int numZ3 = 0;
+int numFZ3 = 0;
+
+// Z4 - Restaurante
+int numZ4 = 0;
+int numFZ4 = 0;
+
+// Estado da Discoteca
+char estadoDisco[7] = "Fechado"; // Aberto ou Fechado
+// Total de pessoas que já entraram na discoteca
+int totalDisco;
+// Total de pessoas que saíram da discoteca
+int saidaDisco;
+// Número de pessoas VIP dentro da discoteca
+int totalVIPS;
+
+// Variáveis do cliente, recebidas do simulador
+int id_cliente;
+int acontecimento;
+int tempo;
+int vip;
 
 str_echo(sockfd) int sockfd;
 {
@@ -62,36 +97,141 @@ str_echo(sockfd) int sockfd;
     // Monitor com a informação da simulação
     for (;;)
     {
-        // Receber mensagem codificada do simulador
-        // Descodificar mensagem
+        // Receber mensagem codificada do simulador,
+        // Descodificar mensagem,
         // Mostrar dados no Monitor
 
         //_____________________AQUI SERÁ FEITO O TRABALHO DA PARTE DO MONITOR_____________________//
+
         system("clear"); // Limpar Monitor anterior
         printf(" ________________________________________ \n");
         printf("(_______________INFORMAÇÃO_______________)\n");
-        printf("( Discoteca: #x       Fila: #y           )\n");
-        printf("(                                        )\n");
-        printf("( Pista Publica: #x   Fila: #y           )\n");
-        printf("(                                        )\n");
-        printf("( Zona VIP: #x        Fila: #y           )\n");
-        printf("(                                        )\n");
-        printf("( WC:#x               Fila: #y           )\n");
-        printf("(                                        )\n");
-        printf("( Restaurante: #x     Fila: #y           )\n");
-        printf("(________________________________________)\n");
+        printf("                                          \n");
+        printf("  Discoteca: %d       Fila: %d            \n", numZ0, numFZ0);
+        printf("                                          \n");
+        printf("  Pista Publica: %d   Fila: %d            \n", numZ1, numFZ1);
+        printf("                                          \n");
+        printf("  Zona VIP: %d        Fila: %d            \n", numZ2, numFZ2);
+        printf("                                          \n");
+        printf("  WC: %d              Fila: %d            \n", numZ3, numFZ3);
+        printf("                                          \n");
+        printf("  Restaurante: %d     Fila: %d            \n", numZ4, numFZ4);
+        printf(" ________________________________________ \n");
         printf("(___________Informação__Global___________)\n");
-        printf("( Entraram na Discoteca: #x              )\n");
-        printf("( Sairam da discoteca: #y                )\n");
-        printf("( Total de VIPs: #z                      )\n");
+        printf("                                          \n");
+        printf("  Estado da Discoteca: %s                 \n", estadoDisco);
+        printf("  Entraram na Discoteca: %d               \n", totalDisco);
+        printf("  Sairam da discoteca: %d                 \n", saidaDisco);
+        printf("  Total de VIPs: %d                       \n", totalVIPS);
+        printf(" ________________________________________ \n");
         printf("(________________________________________)\n");
 
-        /* Lê uma linha do socket */ //<-- Funcionalidade Antiga
+        /* Lê uma linha do socket */ // Linha enviada do simulador
         n = readline(sockfd, line, MAXLINE);
         if (n == 0)
             return;
         else if (n < 0)
             err_dump("str_echo: readline error");
+
+        // Descodificar a linha recebida e guardar os valores em variáveis
+        sscanf(line, "%d.%d.%d.%d", &id_cliente, &acontecimento, &tempo, &vip);
+
+        // Modificação do estado interno da discoteca
+        switch (acontecimento)
+        {
+
+        case 60: // Abertura da Discoteca
+            estadoDisco[7] = '/0';
+            strcpy(estadoDisco, "Aberto");
+            break;
+
+        case 69: // Encerramento da Discoteca
+            estadoDisco[7] = '/0';
+            strcpy(estadoDisco, "Fechado");
+            break;
+
+        case 00: // Entrada para a Discoteca
+            numFZ0--;
+            numZ0++;
+            totalDisco++;
+            break;
+
+        case 01: // Entrada pista de dança
+            numFZ1--;
+            numZ1++;
+            break;
+
+        case 02: // Entrada zona VIP
+            numFZ2--;
+            numZ2++;
+            break;
+
+        case 03: // Entrada na WC
+            numFZ3--;
+            numZ3++;
+            break;
+
+        case 04: // Entrada no restaurante
+            numFZ4--;
+            numZ4++;
+            break;
+
+        case 10: // Espera na fila - Discoteca
+            numZ0++;
+            break;
+
+        case 11: // Espera na fila - Pista de dança
+            numZ1++;
+            break;
+
+        case 12: // Espera na fila - Zona VIP
+            numZ2++;
+            break;
+
+        case 13: // Espera na fila - WC
+            numZ3++;
+            break;
+
+        case 20: // Desistência da fila - Discoteca
+            numFZ0--;
+            break;
+
+        case 21: // Desistência da fila - Pista de Dança
+            numFZ1--;
+            break;
+
+        case 22: // Desistência da fila - Zona VIP
+            numFZ2--;
+            break;
+
+        case 23: // Desistência da fila - WC
+            numFZ3--;
+            break;
+
+        case 30: // Saída - Discoteca
+            numZ0--;
+            saidaDisco++;
+            break;
+
+        case 31: // Saída - Pista de Dança
+            numZ1--;
+            break;
+
+        case 32: // Saída - Zona VIP
+            numZ2--;
+            break;
+
+        case 33: // Saída- WC
+            numZ3--;
+            break;
+
+        case 34: // Saída - restaurante
+            numZ4--;
+            break;
+        default:
+            printf("ERRO: Acontecimento Inválido! \n");
+            break;
+        }
 
         /* Manda linha de volta para o socket. n conta com
            o \0 da string, caso contrário perdia-se sempre
