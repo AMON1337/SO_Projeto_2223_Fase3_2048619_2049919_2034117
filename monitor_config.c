@@ -13,12 +13,12 @@ str_echo(sockfd) int sockfd;
 
     // Menu de inicialização da simulação
     system("clear"); // limpar a consola
-    printf("Conexão estabelecida com o simulador!\n");
+    printf("Conexão estabelecida com o Simulador!\n");
     printf(" _____________________________________ \n");
     printf("(_____Deseja_Iniciar_a_Simulação?_____)\n");
     printf("(                                     )\n");
     printf("(     y - sim, iniciar a simulação    )\n");
-    printf("(     n - não, sair do monitor        )\n");
+    printf("(     n - não, cancelar a simulação   )\n");
     printf("(_____________________________________)\n");
     printf("\nInsira uma opção válida: ");
     int menu = 0;
@@ -31,44 +31,62 @@ str_echo(sockfd) int sockfd;
         {
         case 'y':
             printf("\nSimulação Iniciada!\n");
-            n = write(sockfd, "INICIAR", MAXLINE);
-            menu = 1; // Sai do menu
+            write(sockfd, "INICIAR", 8); // Envia msm para iniciar simulação
+            menu = 1;                    // Sai do menu
             break;
         case 'Y':
             printf("\nSimulação Iniciada!\n");
-            menu = 1; // Sai do menu
-            n = write(sockfd, "INICIAR", MAXLINE);
+            write(sockfd, "INICIAR", 8); // Envia msm para iniciar simulação
+            menu = 1;                    // Sai do menu
             break;
         case 'n':
             printf("\nFechando ligação com o simulador atual!\n");
-            n = write(sockfd, "FECHAR", MAXLINE);
+            write(sockfd, "FECHAR", 7); // Envia msm para cancelar simulação
             close(sockfd);
             printf("\nEsperando nova ligação...\n");
             exit(0);
             break;
         case 'N':
             printf("\nFechando ligação com o simulador atual!\n");
-            n = write(sockfd, "FECHAR", MAXLINE);
+            write(sockfd, "FECHAR", 7); // Envia msm para cancelar simu
             close(sockfd);
             printf("\nEsperando nova ligação...\n");
             exit(0);
             break;
         }
     }
-    // Menu de inicialização da simulação
+    // Fim do menu de inicialização da simulação
 
+    // Receber dados iniciais das zonas:
+
+    // Monitor com a informação da simulação
     for (;;)
     {
+        // Receber mensagem codificada do simulador
+        // Descodificar mensagem
+        // Mostrar dados no Monitor
 
         //_____________________AQUI SERÁ FEITO O TRABALHO DA PARTE DO MONITOR_____________________//
-        printf(" _____________________________________ \n");
-        printf("(_______________MONITOR_______________)\n");
-        printf("(                                     )\n");
-        printf("(             mostrar dados           )\n");
-        printf("(       tratar acontecimentos         )\n");
-        printf("(_____________________________________)\n");
-        /* Lê uma linha do socket */
+        system("clear"); // Limpar Monitor anterior
+        printf(" ________________________________________ \n");
+        printf("(_______________INFORMAÇÃO_______________)\n");
+        printf("( Entrada: #x         Fila: #y           )\n");
+        printf("(                                        )\n");
+        printf("( Pista Publica: #x   Fila: #y           )\n");
+        printf("(                                        )\n");
+        printf("( Zona VIP: #x        Fila: #y           )\n");
+        printf("(                                        )\n");
+        printf("( WC:#x               Fila: #y           )\n");
+        printf("(                                        )\n");
+        printf("( Restaurante: #x     Fila: #y           )\n");
+        printf("(________________________________________)\n");
+        printf("(___________Informação__Global___________)\n");
+        printf("( Entraram na Discoteca: #x              )\n");
+        printf("( Sairam da discoteca: #y                )\n");
+        printf("( Total de VIPs: #z                      )\n");
+        printf("(________________________________________)\n");
 
+        /* Lê uma linha do socket */ //<-- Funcionalidade Antiga
         n = readline(sockfd, line, MAXLINE);
         if (n == 0)
             return;

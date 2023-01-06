@@ -1,5 +1,3 @@
- **NOTA** ALTEREI A CHANCE DE SER VIP de 15 para 20!!
-
 Projeto SO 22/23 Simulação de uma discoteca!
 Alunos: 
 Filipe Lopes - 2048619
@@ -13,7 +11,7 @@ Instruções:
 3- Ligar o simulador.
 4- Executar o Projeto.
 
-O simulador só executa depois do monitor se ter ligado.
+Nota: O simulador só executa depois do monitor se ter ligado.
 
 
 *--- Usamos os sockets sockets-unix-stream para o nosso projeto  ---*
@@ -26,6 +24,14 @@ util-stream-client.c = simulador_config.c
 
 *---                                                             ---*
 
+
+Ficheiro de configurações iniciais do Simulador (simulador_config_inicial.txt):
+Limitações:
+    Não alterar o número de zonas da discoteca.
+    Não alterar o nome das zonas.
+Pode fazer:
+    Alterar a Capacidade de cada zona e da fila.
+    Alterar as Probabilidades.
 
 Acontecimentos do projeto:
 

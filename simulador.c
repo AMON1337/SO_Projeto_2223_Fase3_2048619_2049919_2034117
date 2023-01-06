@@ -5,6 +5,13 @@
 
 // Comunicação com o Monitor
 #define MAXLINE 512 // Tamanho da Mensagem
+// Ler mensagem do Servidor para iniciar/fechar simulação
+int n;                // Número de caracteres
+char buffer[MAXLINE]; // Iniciar/Fechar Simulação
+int valor;            // Comparar buffer com string
+
+// Sincronização
+// AQUI
 
 // Estruturas de dados
 typedef struct cliente
@@ -45,13 +52,6 @@ struct cliente thread_array[500]; // Serão criados 500 tarefas/clientes
 pthread_t threads[500]; // Serão criados 500 tarefas/clientes
 
 int capacidadeDisco = 500; // Utilizado para criar tarefas no int main();
-
-int inciciarSimulacao = 0; // 0 - Espera pelo monitor iniciar, 1 - O monitor deu sinal iniciar
-
-// Ler mensagem do Servidor para iniciar/fechar simulação
-int n;                // Número de caracteres
-char buffer[MAXLINE]; // Iniciar/Fechar Simulação
-int valor;            // Comparar buffer com string
 
 void lerConfigInicial()
 {
@@ -184,8 +184,9 @@ void logInicialDisco() // Escreve no ficheiro de LOGS da simulação
     fclose(fpLog);
 }
 
+// Faz um print do estado inicial da discoteca no ecrã da simulação
 void printInicialDisco()
-{ // Faz um print do estado inicial da discoteca no ecrã da simulação
+{
     printf("**Configuração Inicial da Discoteca**\n");
 
     printf("Numero de zonas na discoteca: %d\n", disco.n_zonas);
@@ -281,8 +282,8 @@ int main(void)
         err_dump("O Simulador não consegue ligar-se ao Monitor!\n");
 
     /*______________________AQUI COMEÇA O NOSSO TRABALHO______________________*/
-
-    printf("Simulador ONLINE\n\n"); //
+    system("clear"); //Limpar consola
+    printf("Simulador ONLINE\n\n"); 
 
     // Esperar iniciar simulação
     printf("Esperando para começar a simulação...\n");
@@ -307,11 +308,12 @@ int main(void)
         close(sockfd);
         exit(0);
     }
+    // Fim da espera para iniciar simulação
 
     // Let's make random, Random again :)
     srand(time(0));
 
-    // COnfiguração Inicial
+    // Configuração Inicial
     lerConfigInicial(); // Lê do ficheiro incial a configuração inicial
 
     logInicialDisco();   // LOGS - Escreve nos logs do simulador o estado incial da discoteca
@@ -320,8 +322,8 @@ int main(void)
     // Inicializar os Semáforos
 
     // Criação das tarefas (clientes)
-    int i = 0;
-    for (i = 0; i < capacidadeDisco; i++) // capacidadeDisco é de 500
+    int i = 0;                            // Número de tarefas criadas
+    for (i = 0; i < capacidadeDisco; i++) // Criar tarefas até capacidadeDisco (500)
     {
         // usleep(1000000); // generates 1 second delay
         usleep(100); // Torna a simulação + rápida, alterar no futuro
@@ -330,7 +332,7 @@ int main(void)
             printf("Erro ao criar o cliente com o id:%d", i);
             return 0;
         }
-        thread_array[i].id_cliente = i + 1; // i=0, id=1
+        thread_array[i].id_cliente = i + 1; // i=0, id_cliente=1
     }
 
     // pthread_cancel() para fechar os threads?
@@ -338,7 +340,7 @@ int main(void)
     /*______________________AQUI ACABA O NOSSO TABALHO______________________*/
 
     /* Envia as linhas lidas do teclado para o socket */
-    str_cli(stdin, sockfd); // Socket  <----- APAGAR ISTO
+    str_cli(stdin, sockfd); // Socket  <----- APAGAR ISTO, Funcionalidade antiga
     /* Fecha o socket e termina */
     close(sockfd);
     exit(0);
