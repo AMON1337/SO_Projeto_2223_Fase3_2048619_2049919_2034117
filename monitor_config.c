@@ -10,7 +10,7 @@
 int numZ0 = 0;
 int numFZ0 = 0;
 
-// Z1 - Pista pública
+// Z1 - Pista de Dança
 int numZ1 = 0;
 int numFZ1 = 0;
 
@@ -27,15 +27,17 @@ int numZ4 = 0;
 int numFZ4 = 0;
 
 // Estado da Discoteca
-char estadoDisco[8] = "Fechado"; // Aberto ou Fechado
+char estadoDisco[8] = "Fechado"; // Aberto ou Fechado, começa simulação a fechado
 // Total de pessoas que já entraram na discoteca
-int totalDisco;
+int totalDisco = 0;
 // Total de pessoas que saíram da discoteca
-int saidaDisco;
-// Número de pessoas VIP dentro da discoteca
-int totalVIPS;
+int saidaDisco = 0;
+// Número de pessoas VIP que entraram da discoteca
+int totalVIPS = 0;
+// Número de pessoas expulsas do discoteca
+int totalExpulsos = 0;
 
-// Variáveis do cliente, recebidas do simulador
+// Variáveis (informação) do cliente, recebidas do simulador
 int id_cliente;
 int acontecimento;
 int tempo;
@@ -92,8 +94,6 @@ str_echo(sockfd) int sockfd;
     }
     // Fim do menu de inicialização da simulação
 
-    // Receber dados iniciais das zonas:
-
     // Monitor com a informação da simulação
     for (;;)
     {
@@ -109,7 +109,7 @@ str_echo(sockfd) int sockfd;
         printf("                                          \n");
         printf("  Discoteca: %d       Fila: %d            \n", numZ0, numFZ0);
         printf("                                          \n");
-        printf("  Pista Publica: %d   Fila: %d            \n", numZ1, numFZ1);
+        printf("  Pista de Dança: %d  Fila: %d            \n", numZ1, numFZ1);
         printf("                                          \n");
         printf("  Zona VIP: %d        Fila: %d            \n", numZ2, numFZ2);
         printf("                                          \n");
@@ -123,6 +123,7 @@ str_echo(sockfd) int sockfd;
         printf("  Entraram na Discoteca: %d               \n", totalDisco);
         printf("  Sairam da discoteca: %d                 \n", saidaDisco);
         printf("  Total de VIPs: %d                       \n", totalVIPS);
+        printf("  Explusos da Discoteca: %d               \n", totalExpulsos);
         printf(" ________________________________________ \n");
         printf("(________________________________________)\n");
 
@@ -134,10 +135,10 @@ str_echo(sockfd) int sockfd;
         else if (n < 0)
             err_dump("str_echo: readline error");
 
-        // Descodificar a linha recebida e guardar os valores em variáveis
+        // Descodificar a linha recebida e guardar os valores temporáriamente em variáveis
         sscanf(line, "%d.%d.%d.%d", &id_cliente, &acontecimento, &tempo, &vip);
 
-        // Modificação do estado interno da discoteca
+        // Acontecimentos da Discoteca:
         switch (acontecimento)
         {
         case 60: // Abertura da Discoteca
@@ -148,24 +149,26 @@ str_echo(sockfd) int sockfd;
             estadoDisco[8] = '/0';
             strcpy(estadoDisco, "Fechado");
             break;
-        case 00: // Entrada para a Discoteca
+        case 00: // Entrada - Discoteca
             numFZ0--;
             numZ0++;
             totalDisco++;
+            if (vip == 1) // Se o cliente que entrou na Discoteca é VIP
+                totalVIPS++;
             break;
-        case 01: // Entrada pista de dança
+        case 01: // Entrada - Pista de Dança
             numFZ1--;
             numZ1++;
             break;
-        case 02: // Entrada zona VIP
+        case 02: // Entrada - Zona VIP
             numFZ2--;
             numZ2++;
             break;
-        case 03: // Entrada na WC
+        case 03: // Entrada - WC
             numFZ3--;
             numZ3++;
             break;
-        case 04: // Entrada no restaurante
+        case 04: // Entrada - Restaurante
             numFZ4--;
             numZ4++;
             break;
@@ -203,15 +206,16 @@ str_echo(sockfd) int sockfd;
         case 32: // Saída - Zona VIP
             numZ2--;
             break;
-        case 33: // Saída- WC
+        case 33: // Saída - WC
             numZ3--;
             break;
         case 34: // Saída - Restaurante
             numZ4--;
             break;
-        case 35: // Saída - Expulso da Discoteca
+        case 39: // Saída - Expulso da Discoteca
             numZ0--;
             saidaDisco++;
+            totalExpulsos++;
             break;
         default: // Outro Acontecimento // ERRO
             printf("ERRO: Acontecimento Inválido! \n");
@@ -221,7 +225,7 @@ str_echo(sockfd) int sockfd;
         /* Manda linha de volta para o socket. n conta com
            o \0 da string, caso contrário perdia-se sempre
            um caracter!*/
-        /* FUNCIONALIDADE ANTIGA, ENVIA DE VOLTA a mesnagem recebida
+        /* FUNCIONALIDADE ANTIGA, ENVIA DE VOLTA a mensagem recebida
         if (writen(sockfd, line, n) != n)
             err_dump("str_echo: writen error");
         */

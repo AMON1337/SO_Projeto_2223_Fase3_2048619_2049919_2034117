@@ -40,11 +40,11 @@ Acontecimentos do projeto:
 60 : Abertura da Discoteca
 69 : Encerramento da Discoteca
 
-00 : Entrada para a Discoteca
-01 : Entrada Pista de Dança
-02 : Entrada zona VIP
-03 : Entrada na WC
-04 : Entrada no Restaurante
+00 : Entrada - Discoteca
+01 : Entrada - Pista de Dança
+02 : Entrada - Zona VIP
+03 : Entrada - WC
+04 : Entrada - Restaurante
 
 10 : Espera na fila - Discoteca
 11 : Espera na fila - Pista de Dança
@@ -61,4 +61,4 @@ Acontecimentos do projeto:
 32 : Saída - Zona VIP
 33 : Saída - WC
 34 : Saída - Restaurante
-35 : Saída - Expulso da Discoteca
+39 : Saída - Expulso da Discoteca
