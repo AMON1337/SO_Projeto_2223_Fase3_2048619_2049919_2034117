@@ -17,3 +17,4 @@ z4_fila_max : 0
 prob_desistir_fila : 40
 prob_ser_vip : 20
 prob_ser_expulso : 1
+prob_sair_disco : 33

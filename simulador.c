@@ -57,6 +57,7 @@ typedef struct discoteca
     int prob_desistir_fila;
     int prob_ser_vip;
     int prob_ser_expulso;
+    int prob_sair_disco;
 };
 
 struct discoteca disco; // Estado interno da nossa DISCOTECA
@@ -144,6 +145,8 @@ void lerConfigInicial()
             disco.prob_ser_vip = atoi(valor);
         if (strcmp(nome, "prob_ser_expulso") == 0)
             disco.prob_ser_expulso = atoi(valor);
+        if (strcmp(nome, "prob_sair_disco") == 0)
+            disco.prob_sair_disco = atoi(valor);
     }
     printf("**Loading Completo**\n\n");
     fclose(fpConfig);
@@ -191,6 +194,7 @@ void logInicialDisco()
     fprintf(fpLog, "Probabilidade de desistir da fila: %d\n", disco.prob_desistir_fila);
     fprintf(fpLog, "Probabilidade de ser VIP: %d\n", disco.prob_ser_vip);
     fprintf(fpLog, "Probabilidade de ser expluso: %d\n", disco.prob_ser_expulso);
+    fprintf(fpLog, "Probabilidade de sair da Discoteca: %d\n", disco.prob_sair_disco);
 
     // Acontecimentos da simulação
     fprintf(fpLog, "\n*--Acontecimentos da simulação--*\n"
@@ -251,6 +255,7 @@ void printInicialDisco()
     printf("Probabilidade de desistir da fila: %d\n", disco.prob_desistir_fila);
     printf("Probabilidade de ser VIP: %d\n", disco.prob_ser_vip);
     printf("Probabilidade de ser expluso: %d\n", disco.prob_ser_expulso);
+    printf("Probabilidade de sair da Discoteca: %d\n", disco.prob_sair_disco);
 
     // Acontecimentos da simulação
     printf("\n*--Acontecimentos da simulação--*\n"
@@ -303,7 +308,104 @@ void enviarAcontecimento(int id_cliente, int acontecimento, int tempo, int vip)
     sem_post(&sem_EnviarAcontMonitor); // Assinala o semaforo para a próxima tarefa
 }
 
-// Rotina do Cliente na Discoteca
+// Rotina do Cliente depois de entrar na discoteca
+void RotinaClienteDiscoteca(struct cliente *cliente)
+{
+    // Cliente decide em que zona deseja ir!
+    usleep(1000000 + rand() % 5000000); // Tempo de decisão 1s + 0-5s
+    int escolha;
+    // Escolha de zona: 1 - Pista de Dança, 2 - Zona VIP, 3 - WC ou 4 - Restaurante
+    escolha = rand() % 4 + 1; // Escolher número random de 1 a 4
+
+    switch (escolha)
+    {
+    case 1: // Pista de Dança
+        // MUTEX Verificar se pode ir para a fila?
+        // Entrar na Fila de Espera
+        sem_wait(&sem_FilaEntradaPistaD); // Entra na fila de espera da pista de dança
+        // Notificar Acontecimento
+        cliente->acontecimento = 11; // Acontecimento: Espera na fila - Pista de Dança
+        timespec_get(&ts, TIME_UTC); // Tempo atual
+        cliente->tempo = ts.tv_sec;
+        enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
+        // Cliente quer desistir da fila?
+        usleep(1000000 + rand() % 2000000); // Tempo de decisão 1s + 0-2s
+        if ((rand() % 100 + 1) <= disco.prob_desistir_fila)
+        {
+            // Desistiu da fila!
+            sem_post(&sem_FilaEntradaPistaD); // Sai da Fila de espera da pista de dança
+            // Notificar Acontecimento
+            cliente->acontecimento = 21; // Acontecimento: Desistência da fila - Pista de Dança
+            timespec_get(&ts, TIME_UTC); // Tempo atual
+            cliente->tempo = ts.tv_sec;
+            enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+            break;
+        }
+
+        // Cliente quer continuar na fila!
+        sem_wait(&sem_PistaDanca);        // Entra na pista de dança
+        sem_post(&sem_FilaEntradaPistaD); // Saída da Fila de espera da pista de dança
+        // Notificar Acontecimento
+        cliente->acontecimento = 01; // Acontecimento: Entrada - Pista de Dança
+        timespec_get(&ts, TIME_UTC); // Tempo atual
+        cliente->tempo = ts.tv_sec;
+        enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
+        // Cliente diverte-se na pista de dança...
+        usleep(5000000 + rand() % 5000000); // Tempo de  diversão 5 + 0-5s
+        // Cliente cansado de Dançar!
+        sem_post(&sem_PistaDanca); // Saída da Pista de Dança
+        // Notificar Acontecimento
+        cliente->acontecimento = 31; // Acontecimento: Saída - Pista de Dança
+        timespec_get(&ts, TIME_UTC); // Tempo atual
+        cliente->tempo = ts.tv_sec;
+        enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+        break;
+
+    case 2: // Zona VIP
+        printf("cliente %d, escolha2.\n", cliente->id_cliente);
+        break;
+    case 3: // WC
+        printf("cliente %d, escolha3.\n", cliente->id_cliente);
+        break;
+    case 4: // Restaurante;
+        printf("cliente %d, escolha4.\n", cliente->id_cliente);
+        break;
+    default: // Escolha inválida //ERRO
+        printf("O cliente %d, realizou uma escolha inválida!\n", cliente->id_cliente);
+        break;
+    }
+
+    // Cliente andou à porrada com os seguranças?
+    if ((rand() % 100 + 1) <= disco.prob_ser_expulso)
+    {
+        sem_post(&sem_Discoteca);    // Sai da Discoteca (à força)
+        cliente->acontecimento = 39; // Acontecimento: Saída - Expulso
+        timespec_get(&ts, TIME_UTC); // Tempo atual
+        cliente->tempo = ts.tv_sec;
+        enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
+        return; // Sai da funcção rotinaClienteDiscoteca e volta para *RotinaCliente
+    }
+
+    // Cliente quer sair da Discoteca?
+    if ((rand() % 100 + 1) <= disco.prob_sair_disco)
+    {
+        sem_post(&sem_Discoteca);    // Sai da Discoteca (por decisão sua)
+        cliente->acontecimento = 30; // Acontecimento: Saída - Discoteca
+        timespec_get(&ts, TIME_UTC); // Tempo atual
+        cliente->tempo = ts.tv_sec;
+        enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
+        return; // Sai da funcção rotinaClienteDiscoteca e volta para *RotinaCliente
+    }
+
+    // Cliente decidiu ficar na discoteca para apreciar outras atividades
+    RotinaClienteDiscoteca(cliente); // Chama a rotina outra vez e começa de novo!
+}
+
+// Rotina do Cliente na Discoteca,
 void *rotinaCliente(void *ptr)
 {
     // Identificar o cliente;
@@ -316,11 +418,9 @@ void *rotinaCliente(void *ptr)
     else
         cliente->vip = 0; // NO VIP
 
-    printf("Iniciei rotina, sou o cliente de ID: %d,VIP:%d\n", cliente->id_cliente, cliente->vip); // Temporário
-
-    // Entra na fila para a discoteca
+    // Cliente entra na fila para a discoteca
     sem_wait(&sem_FilaEntradaDisco); // Entra na fila de espera
-
+    // Notificar Acontecimento
     cliente->acontecimento = 10; // Acontecimento: Espera na fila - Discoteca
     timespec_get(&ts, TIME_UTC); // Pega no tempo atual e guarda no cliente
     cliente->tempo = ts.tv_sec;
@@ -334,16 +434,24 @@ void *rotinaCliente(void *ptr)
     {
     }
 
+    // Cliente quer entrar na Discoteca
     sem_wait(&sem_Discoteca);        // Tenta entrar na discoteca, quando conseugue entrar,
     sem_post(&sem_FilaEntradaDisco); // sai da fila de entrada
-
+    // Notificar Acontecimento
     cliente->acontecimento = 00; // Acontecimento: Entrada - Discoteca
     timespec_get(&ts, TIME_UTC); // Pega no tempo atual e guarda no cliente
     cliente->tempo = ts.tv_sec;
     enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
 
+    // Função que trata da rotina do cliente dentro da discoteca
+    RotinaClienteDiscoteca(cliente);
+
+    // Fecha a tarefa
+    pthread_exit(cliente);
+    //___________________________________________________________//
+
     //________ DAQUI PARA BAXIO È PROVISÓRIO SÒ PARA TESTAR_____//
-    usleep(5000000 +rand()%9000000); // Espera 5s - TESTE
+    usleep(5000000 + rand() % 9000000); // Espera 5s - TESTE
 
     // Entrar na Pista Pública:
     sem_wait(&sem_FilaEntradaPistaD);
@@ -359,14 +467,14 @@ void *rotinaCliente(void *ptr)
     timespec_get(&ts, TIME_UTC);      // Pega no tempo atual e guarda no cliente
     cliente->tempo = ts.tv_sec;
     enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
-    usleep(10000000+ rand()%9000000); // Espera 15s - TESTE
+    usleep(10000000 + rand() % 9000000); // Espera 15s - TESTE
     // Sair da fila
     sem_post(&sem_PistaDanca);   // Saída da Pista de Dança
     cliente->acontecimento = 31; // Acontecimento: Saída - Pista de Dança
     timespec_get(&ts, TIME_UTC); // Pega no tempo atual e guarda no cliente
     cliente->tempo = ts.tv_sec;
     enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
-    usleep(5000000 + rand()%9000000); // Espera 5s - TESTE
+    usleep(5000000 + rand() % 9000000); // Espera 5s - TESTE
 
     // TESTE: SIMULAR SAIDA DA DISCOTECA
     if ((rand() % 100 + 1) <= disco.prob_ser_expulso) // 1% de chance rand 1-100

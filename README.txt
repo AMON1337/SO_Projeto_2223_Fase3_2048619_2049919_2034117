@@ -1,4 +1,5 @@
 NOTA: Acontecimento 14 e 24 o restaurante não tem fila, hmmm devemos colocar?
+NOTA2: ALTERAR OS PRINTS COM OS ACONTECIMENTOS, estão desatualizados!
 
 Projeto SO 22/23 Simulação de uma discoteca!
 Alunos: 
