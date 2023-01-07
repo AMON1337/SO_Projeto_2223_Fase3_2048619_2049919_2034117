@@ -1,6 +1,6 @@
 n_zonas : 5
 z0_nome : discoteca
-z1_nome : pista_publica
+z1_nome : pista_danca
 z2_nome : zona_vip
 z3_nome : wc
 z4_nome : restaurante

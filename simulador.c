@@ -74,6 +74,9 @@ pthread_t threads[500]; // Serão criados 500 tarefas/clientes
 
 int capacidadeDisco = 500; // Utilizado para criar tarefas no int main();
 
+int tarefasExit = 0;               // Número de tarefas que foram destruídas
+pthread_mutex_t mutex_tarefasExit; // Trinco para a seccção crítica
+
 // Tarefa para abrir/fechar a discoteca //
 typedef struct horarioDiscoteca
 {
@@ -85,7 +88,7 @@ struct horarioDiscoteca horarioDiscoteca;
 pthread_t abrirFecharDisco;
 
 // Mutex para abrir/fechar discoteca;
-pthread_mutex_t afDiscoteca;
+pthread_mutex_t mutex_afDiscoteca;
 
 int discotecaAberta = 0;  // 0 - Disco Fechada, 1 - disco Aberta, 2 - Disco Encerrar
 int tempoDiscoAbre = 5;   // A Disco abre 5s depois da simulação começar
@@ -227,8 +230,8 @@ void logInicialDisco()
                    "32 : Saída - Zona VIP\n"
                    "33 : Saída - WC\n"
                    "34 : Saída - Restaurante\n"
-                   "33 : Saída - Expulso da Zona VIP\n"
-                   "34 : Saída - Expulso da Discoteca\n");
+                   "38 : Saída - Expulso da Zona VIP\n"
+                   "39 : Saída - Expulso da Discoteca\n");
 
     // Preparar para receber os Acontecimentos da simulação:
     fprintf(fpLog, "\n\n* <---> ACONTECIMENTOS DA SIMULAÇÃO <---> *\n\n");
@@ -290,8 +293,8 @@ void printInicialDisco()
            "32 : Saída - Zona VIP\n"
            "33 : Saída - WC\n"
            "34 : Saída - Restaurante\n"
-           "33 : Saída - Expulso da Zona VIP\n"
-           "34 : Saída - Expulso da Discoteca\n");
+           "38 : Saída - Expulso da Zona VIP\n"
+           "39 : Saída - Expulso da Discoteca\n");
 }
 
 // Envia o acontecimento para o Monitor/ Escreva na logSimulador e print no ecrã do simulador
@@ -334,15 +337,15 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
     // Modificador de escolha: VIP-> zona VIP, no VIP -> pista de Dança
     if (cliente->vip == 0) // Não é VIP
     {
-        modificador = rand() % 1 + 1; // 50% de chance de escolher 0
-        if (modificador == 0)         // escolhe 0
-            escolha = 1;              // Cliente  Não VIP muda a escolha de zona para a pista de Dança
+        modificador = rand() % 2; // 50% de chance de escolher 0 ou 1
+        if (modificador == 0)     // escolhe 0
+            escolha = 1;          // Cliente  Não VIP muda a escolha de zona para a pista de Dança
     }
     else if (cliente->vip == 1) // É VIP
     {
-        modificador = rand() % 1 + 1; // 50% de chance de escolher 0
-        if (modificador == 0)         // escolhe 0
-            escolha = 2;              // Cliente VIP muda a escolha de zona para a zona VIP
+        modificador = rand() % 2; // 50% de chance de escolher 0, 0 ou 1
+        if (modificador == 0)     // escolhe 0
+            escolha = 2;          // Cliente VIP muda a escolha de zona para a zona VIP
     }
 
     switch (escolha)
@@ -527,6 +530,10 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
         cliente->tempo = ts.tv_sec;
         enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
 
+        // Secção Crítica
+        pthread_mutex_lock(&mutex_tarefasExit);
+        tarefasExit++; // adiciona tarefa fechada
+        pthread_mutex_unlock(&mutex_tarefasExit);
         // Fecha a tarefa
         pthread_exit(cliente);
     }
@@ -541,16 +548,20 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
         cliente->tempo = ts.tv_sec;
         enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
 
+        // Secção Crítica
+        pthread_mutex_lock(&mutex_tarefasExit);
+        tarefasExit++; // adiciona tarefa fechada
+        pthread_mutex_unlock(&mutex_tarefasExit);
         // Fecha a tarefa
         pthread_exit(cliente);
     }
 
     // A Discoteca está encerrada?
     // Secção Crítica
-    pthread_mutex_lock(&afDiscoteca);
+    pthread_mutex_lock(&mutex_afDiscoteca);
     if (discotecaAberta == 0 || discotecaAberta == 2) // Se discoteca fechada
     {
-        pthread_mutex_unlock(&afDiscoteca); // Liberta o trinco
+        pthread_mutex_unlock(&mutex_afDiscoteca); // Liberta o trinco
 
         sem_post(&sem_Discoteca);    // Sai da Discoteca (porque está fechada!)
         cliente->acontecimento = 30; // Acontecimento: Saída - Discoteca
@@ -558,10 +569,14 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
         cliente->tempo = ts.tv_sec;
         enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
 
+        // Secção Crítica
+        pthread_mutex_lock(&mutex_tarefasExit);
+        tarefasExit++; // adiciona tarefa fechada
+        pthread_mutex_unlock(&mutex_tarefasExit);
         // Fecha a tarefa
         pthread_exit(cliente);
     }
-    pthread_mutex_unlock(&afDiscoteca);
+    pthread_mutex_unlock(&mutex_afDiscoteca);
 
     // Cliente decidiu ficar na discoteca para apreciar outras atividades
     RotinaClienteDiscoteca(cliente); // Chama a rotina outra vez e começa de novo!
@@ -595,15 +610,15 @@ void *rotinaCliente(void *ptr)
     do
     {
         // Secção crítica;
-        pthread_mutex_lock(&afDiscoteca);
+        pthread_mutex_lock(&mutex_afDiscoteca);
         if (discotecaAberta == 1) // Se discoteca aberta
         {
-            pthread_mutex_unlock(&afDiscoteca); // Liberta o trinco
-            break;                              // Quebra o ciclo
+            pthread_mutex_unlock(&mutex_afDiscoteca); // Liberta o trinco
+            break;                                    // Quebra o ciclo
         }
         else if (discotecaAberta == 2) // Discoteca abriu hoje, mas já fechou
         {
-            pthread_mutex_unlock(&afDiscoteca); // Liberta o trinco
+            pthread_mutex_unlock(&mutex_afDiscoteca); // Liberta o trinco
 
             usleep(rand() % 5000000);        // Espera 0-5s
             sem_post(&sem_FilaEntradaDisco); // sai da fila de entrada da discoteca
@@ -613,9 +628,14 @@ void *rotinaCliente(void *ptr)
             cliente->tempo = ts.tv_sec;
             enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
 
-            pthread_exit(cliente); // Fecha a tarefa
+            // Secção Crítica
+            pthread_mutex_lock(&mutex_tarefasExit);
+            tarefasExit++; // adiciona tarefa fechada
+            pthread_mutex_unlock(&mutex_tarefasExit);
+            // Fecha a tarefa
+            pthread_exit(cliente);
         }
-        pthread_mutex_unlock(&afDiscoteca);
+        pthread_mutex_unlock(&mutex_afDiscoteca);
     } while (1);
 
     // Cliente quer entrar na Discoteca
@@ -630,6 +650,11 @@ void *rotinaCliente(void *ptr)
     // Função que trata da rotina do cliente dentro da discoteca
     RotinaClienteDiscoteca(cliente);
 
+    /*Só por redundância / precausão*/
+    // Secção Crítica
+    pthread_mutex_lock(&mutex_tarefasExit);
+    tarefasExit++; // adiciona tarefa fechada
+    pthread_mutex_unlock(&mutex_tarefasExit);
     // Fecha a tarefa
     pthread_exit(cliente);
 }
@@ -654,9 +679,9 @@ void *RotinaAbrirDiscoteca(void *ptr)
     }
 
     // Secção Crítica
-    pthread_mutex_lock(&afDiscoteca);
+    pthread_mutex_lock(&mutex_afDiscoteca);
     discotecaAberta = 1; // abre a discoteca
-    pthread_mutex_unlock(&afDiscoteca);
+    pthread_mutex_unlock(&mutex_afDiscoteca);
 
     enviarAcontecimento(0, 60, ts.tv_sec, 1); // Envia o acontecimento de abrir a discoteca id_cliente 0 é o manager
     printf("Discoteca abriu as portas ao público! :)\n");
@@ -668,15 +693,20 @@ void *RotinaAbrirDiscoteca(void *ptr)
     }
 
     // Secção Crítica
-    pthread_mutex_lock(&afDiscoteca);
+    pthread_mutex_lock(&mutex_afDiscoteca);
     discotecaAberta = 2; // fecha discoteca pelo dia
-    pthread_mutex_unlock(&afDiscoteca);
+    pthread_mutex_unlock(&mutex_afDiscoteca);
 
     enviarAcontecimento(0, 69, ts.tv_sec, 1); // Envia o acontecimento de abrir a discoteca id_cliente 0 é o manager
     printf("Discoteca fechou as portas ao público! :(\n");
 
+    /* Fecha a tarefa +1 */
+    // Secção Crítica
+    pthread_mutex_lock(&mutex_tarefasExit);
+    tarefasExit++; // adiciona tarefa fechada
+    pthread_mutex_unlock(&mutex_tarefasExit);
     // Fecha a tarefa
-    pthread_exit(horarioDiscoteca);
+    pthread_exit(horarioDiscoteca); // Fecha a tarefa
 }
 
 int main(void)
@@ -742,8 +772,11 @@ int main(void)
     }
     // Fim da espera para iniciar simulação
 
+    // ---> Inicializar os Trincos <--- //
+    pthread_mutex_init(&mutex_afDiscoteca, NULL); // Trinco para abrir ou fechar a discoteca;
+    pthread_mutex_init(&mutex_tarefasExit, NULL); // Trinco para seccção crítica num tarefas exit
+
     // ---> Inicializar os Semáforos <--- // Segundo argumento sem_init a 0, significa que é partilhado entre tarefas
-    pthread_mutex_init(&afDiscoteca, NULL); // Trinco para abrir ou fechar a discoteca;
 
     sem_init(&sem_EnviarAcontMonitor, 0, 1); // Iniciado a 1, exclusão mútua, só uma tarefa é que envia de cada vez o aconteciemento ao monitor
 
@@ -788,14 +821,15 @@ int main(void)
         thread_array[i].id_cliente = i + 1; // i=0, id_cliente=1
     }
 
-    // Ciclo Infinito!
-    while (1)
+    // Enquanto as tarefas fechadas não forem igula as tarefas criadas
+    while (tarefasExit != capacidadeDisco + 1) // tarefas clientes + tarefa que abre e fecha a disco
     {
-    } // Provisório só para manter a simulação a funcionar, depois de já ter criado os 500 clientes!
+    }
+    printf("Todas as tarefas do Simulador fechadas com sucesso!\n");
+    printf("Fechando o Simulador em 3 segundos...\n");
+    usleep(3000000); // Espera 3 segundos
 
-    // pthread_cancel() para fechar os threads?
-
-    // Menu sair do simulador! - Testar melhor
+    // Menu sair do simulador! - Discutir com o grupo sobre este menu final
     /*
     printf("\nFim da simulação!\n");
     printf("Pode analisar os dados da simulação no monitor ou nos ficheiros .log criados!\n");
@@ -818,11 +852,6 @@ int main(void)
         }
     }
     */
-
-    /*______________________AQUI ACABA O NOSSO TABALHO______________________*/
-
-    /* Envia as linhas lidas do teclado para o socket */
-    // str_cli(stdin, sockfd); // Socket  <----- APAGAR ISTO, Funcionalidade antiga
 
     /* Fecha o socket e termina */
     close(sockfd);

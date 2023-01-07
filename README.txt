@@ -1,5 +1,6 @@
-NOTA: Acontecimento 14 e 24 o restaurante não tem fila, hmmm devemos colocar?
-NOTA2: ALTERAR OS PRINTS COM OS ACONTECIMENTOS, estão desatualizados!
+NOTA:   ALTERAR OS PRINTS COM OS ACONTECIMENTOS, estão desatualizados!
+NOTA2:  Discutir o menu final do simulador!
+NOTA3:  Impedir clientes de ficarem á espera para entrar nas filas de espera!
 
 Projeto SO 22/23 Simulação de uma discoteca!
 Alunos: 
