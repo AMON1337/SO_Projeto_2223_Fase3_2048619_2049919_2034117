@@ -3,6 +3,8 @@
 
 /* Monitor do tipo socket stream. */
 
+
+
 // Variáveis monitor
 // Número atual de pessoas na zona(Z), fila da zona(FZ) ou desisténcia da fila da zona (DFZ)
 
@@ -46,8 +48,31 @@ int acontecimento;
 int tempo;
 int vip;
 
+
+
+//Ficheiro de Logs da discoteca
+void LogMonitor(int totalDisco, int saidaDisco, int totalVIPS, int totalDesistencias, int totalExpulsos)
+{
+    // Escreve o Acontecimento no logMonitor.log
+    FILE *fpLog = fopen("logMonitor.log", "a+"); // Abrir e/ou criar o ficheiro logs para escrever
+    if (fpLog == NULL)
+    {
+        printf("Ocorreu um problema ao abrir o ficheiro de logs!\nImpossível continuar!\n");
+        return;
+    }
+        fprintf(fpLog, "!---------- LOGS DO MONITOR ----------!\n\n");
+        fprintf(fpLog, "Entraram na Discoteca: %d               \n", totalDisco);
+        fprintf(fpLog, "Sairam da discoteca: %d                 \n", saidaDisco);
+        fprintf(fpLog, "Total de VIPs: %d                       \n", totalVIPS);
+        fprintf(fpLog, "Total de desistências das filas: %d     \n", totalDesistencias);
+        fprintf(fpLog, "Explusos da Discoteca: %d               \n", totalExpulsos);
+
+    fclose(fpLog);
+}
+
 str_echo(sockfd) int sockfd;
 {
+    
     int n, i;
     char line[MAXLINE + 1]; // Linha de testo recebida com o acontecimento + info cliente
 
@@ -141,7 +166,10 @@ str_echo(sockfd) int sockfd;
 
         // Descodificar a linha recebida e guardar os valores temporáriamente em variáveis
         sscanf(line, "%d.%d.%d.%d", &id_cliente, &acontecimento, &tempo, &vip);
-
+        
+        
+        
+        
         // Acontecimentos da Discoteca:
         switch (acontecimento)
         {
@@ -230,6 +258,10 @@ str_echo(sockfd) int sockfd;
             printf("ERRO: Acontecimento Inválido! \n");
             break;
         }
+        
+        //Imprime info da discoteca depois dela ter fechado 
+        if(numZ0 == 0 && numFZ0 == 0)
+            LogMonitor(totalDisco, saidaDisco, totalVIPS, totalDesistencias, totalExpulsos);
 
         /* Manda linha de volta para o socket. n conta com
            o \0 da string, caso contrário perdia-se sempre
