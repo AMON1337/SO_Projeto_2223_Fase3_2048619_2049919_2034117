@@ -4,7 +4,7 @@
 /* Monitor do tipo socket stream. */
 
 // Variáveis monitor
-// Número atual de pessoas na zona(Z) ou na fila da zona(FZ)
+// Número atual de pessoas na zona(Z), fila da zona(FZ) ou desisténcia da fila da zona (DFZ)
 
 // Z0 - Discoteca
 int numZ0 = 0;
@@ -13,6 +13,7 @@ int numFZ0 = 0;
 // Z1 - Pista de Dança
 int numZ1 = 0;
 int numFZ1 = 0;
+int numDFZ1 = 0; // <--- usado para os logs?
 
 // Z2 - Zona VIP
 int numZ2 = 0;
@@ -27,7 +28,7 @@ int numZ4 = 0;
 int numFZ4 = 0;
 
 // Estado da Discoteca
-char estadoDisco[8] = "Fechado"; // Aberto ou Fechado, começa simulação a fechado
+char estadoDisco[8] = "FECHADO"; // Aberto ou Fechado, começa simulação a fechado
 // Total de pessoas que já entraram na discoteca
 int totalDisco = 0;
 // Total de pessoas que saíram da discoteca
@@ -36,6 +37,8 @@ int saidaDisco = 0;
 int totalVIPS = 0;
 // Número de pessoas expulsas do discoteca
 int totalExpulsos = 0;
+// Número de pessoas que desistiram da discoteca
+int totalDesistencias = 0;
 
 // Variáveis (informação) do cliente, recebidas do simulador
 int id_cliente;
@@ -123,6 +126,7 @@ str_echo(sockfd) int sockfd;
         printf("  Entraram na Discoteca: %d               \n", totalDisco);
         printf("  Sairam da discoteca: %d                 \n", saidaDisco);
         printf("  Total de VIPs: %d                       \n", totalVIPS);
+        printf("  Total de desistências das filas: %d     \n", totalDesistencias);
         printf("  Explusos da Discoteca: %d               \n", totalExpulsos);
         printf(" ________________________________________ \n");
         printf("(________________________________________)\n");
@@ -143,11 +147,11 @@ str_echo(sockfd) int sockfd;
         {
         case 60: // Abertura da Discoteca
             estadoDisco[8] = '/0';
-            strcpy(estadoDisco, "Aberto");
+            strcpy(estadoDisco, "ABERTO");
             break;
         case 69: // Encerramento da Discoteca
             estadoDisco[8] = '/0';
-            strcpy(estadoDisco, "Fechado");
+            strcpy(estadoDisco, "FECHADO");
             break;
         case 00: // Entrada - Discoteca
             numFZ0--;
@@ -186,15 +190,20 @@ str_echo(sockfd) int sockfd;
             break;
         case 20: // Desistência da fila - Discoteca
             numFZ0--;
+            totalDesistencias++;
             break;
         case 21: // Desistência da fila - Pista de Dança
             numFZ1--;
+            numDFZ1++;
+            totalDesistencias++;
             break;
         case 22: // Desistência da fila - Zona VIP
             numFZ2--;
+            totalDesistencias++;
             break;
         case 23: // Desistência da fila - WC
             numFZ3--;
+            totalDesistencias++;
             break;
         case 30: // Saída - Discoteca
             numZ0--;

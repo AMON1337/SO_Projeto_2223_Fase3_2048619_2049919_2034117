@@ -78,9 +78,12 @@ typedef struct horarioDiscoteca
 struct horarioDiscoteca horarioDiscoteca;
 pthread_t abrirFecharDisco;
 
-int discotecaAberta = 0;  // 0 Disco fechado, 1 disco Aberto
+// Mutex para abrir/fechar discoteca;
+pthread_mutex_t afDiscoteca;
+
+int discotecaAberta = 0;  // 0 - Disco Fechada, 1 - disco Aberta, 2 - Disco Encerrar
 int tempoDiscoAbre = 5;   // A Disco abre 5s depois da simulação começar
-int tempoDiscoFecha = 65; // A disco fecha 65s depois da simulação começar
+int tempoDiscoFecha = 65; // A Disco fecha 65s depois da simulação começar
 //  Nota: 65-5 = 60s que discoteca fica aberta ao público
 
 // Tempo - usamos como referencia para os acontecimentos da simulação
@@ -321,7 +324,7 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
     {
     case 1: // Pista de Dança
         // MUTEX Verificar se pode ir para a fila?
-        // Entrar na Fila de Espera
+        // Entrar na Fila de Espera da Pista de Dança
         sem_wait(&sem_FilaEntradaPistaD); // Entra na fila de espera da pista de dança
         // Notificar Acontecimento
         cliente->acontecimento = 11; // Acontecimento: Espera na fila - Pista de Dança
@@ -354,7 +357,7 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
 
         // Cliente diverte-se na pista de dança...
         usleep(5000000 + rand() % 5000000); // Tempo de  diversão 5 + 0-5s
-        // Cliente cansado de Dançar!
+        // Cliente cansado de Dançar, quer sair da Pista de Dança!
         sem_post(&sem_PistaDanca); // Saída da Pista de Dança
         // Notificar Acontecimento
         cliente->acontecimento = 31; // Acontecimento: Saída - Pista de Dança
@@ -380,19 +383,37 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
     // Cliente andou à porrada com os seguranças?
     if ((rand() % 100 + 1) <= disco.prob_ser_expulso)
     {
-        sem_post(&sem_Discoteca);    // Sai da Discoteca (à força)
+        sem_post(&sem_Discoteca); // Sai da Discoteca (à força)
+        // Notificar acontecimento
         cliente->acontecimento = 39; // Acontecimento: Saída - Expulso
         timespec_get(&ts, TIME_UTC); // Tempo atual
         cliente->tempo = ts.tv_sec;
         enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
 
-        return; // Sai da funcção rotinaClienteDiscoteca e volta para *RotinaCliente
+        return; // Sai da função rotinaClienteDiscoteca e volta para *RotinaCliente
     }
 
     // Cliente quer sair da Discoteca?
     if ((rand() % 100 + 1) <= disco.prob_sair_disco)
     {
-        sem_post(&sem_Discoteca);    // Sai da Discoteca (por decisão sua)
+        sem_post(&sem_Discoteca); // Sai da Discoteca (por decisão sua)
+        // Notificar Acontecimento
+        cliente->acontecimento = 30; // Acontecimento: Saída - Discoteca
+        timespec_get(&ts, TIME_UTC); // Tempo atual
+        cliente->tempo = ts.tv_sec;
+        enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
+        return; // Sai da função rotinaClienteDiscoteca e volta para *RotinaCliente
+    }
+
+    // A Discoteca está encerrada?
+    // Secção Crítica
+    pthread_mutex_lock(&afDiscoteca);
+    if (discotecaAberta == 0 || discotecaAberta == 2) // Se discoteca fechada
+    {
+        pthread_mutex_unlock(&afDiscoteca); // Liberta o trinco
+
+        sem_post(&sem_Discoteca);    // Sai da Discoteca (porque está fechada!)
         cliente->acontecimento = 30; // Acontecimento: Saída - Discoteca
         timespec_get(&ts, TIME_UTC); // Tempo atual
         cliente->tempo = ts.tv_sec;
@@ -400,6 +421,7 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
 
         return; // Sai da funcção rotinaClienteDiscoteca e volta para *RotinaCliente
     }
+    pthread_mutex_unlock(&afDiscoteca);
 
     // Cliente decidiu ficar na discoteca para apreciar outras atividades
     RotinaClienteDiscoteca(cliente); // Chama a rotina outra vez e começa de novo!
@@ -426,16 +448,38 @@ void *rotinaCliente(void *ptr)
     cliente->tempo = ts.tv_sec;
     enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
 
-    // printf("Sou o cliente de ID: %d, e entrei na discoteca\n", cliente->id_cliente); //TESTE
-    usleep(1000000); // Espera 1s
+    // Espera na fila da discoteca para entrar
+    usleep(1000000 + rand() % 3000000); // Espera1s + 0-3s
 
     // Enquanto a discoteca estiver fechada, espera que ela abra
-    while (discotecaAberta == 0)
+    do
     {
-    }
+        // Secção crítica;
+        pthread_mutex_lock(&afDiscoteca);
+        if (discotecaAberta == 1) // Se discoteca aberta
+        {
+            pthread_mutex_unlock(&afDiscoteca); // Liberta o trinco
+            break;                              // Quebra o ciclo
+        }
+        else if (discotecaAberta == 2) // Discoteca abriu hoje, mas já fechou
+        {
+            pthread_mutex_unlock(&afDiscoteca); // Liberta o trinco
+
+            usleep(rand() % 5000000);        // Espera 0-5s
+            sem_post(&sem_FilaEntradaDisco); // sai da fila de entrada da discoteca
+            // Notificar Acontecimento
+            cliente->acontecimento = 20; // Acontecimento: Desistência da fila - Discoteca
+            timespec_get(&ts, TIME_UTC); // Tempo atual
+            cliente->tempo = ts.tv_sec;
+            enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
+            pthread_exit(cliente); // Fecha a tarefa
+        }
+        pthread_mutex_unlock(&afDiscoteca);
+    } while (1);
 
     // Cliente quer entrar na Discoteca
-    sem_wait(&sem_Discoteca);        // Tenta entrar na discoteca, quando conseugue entrar,
+    sem_wait(&sem_Discoteca);        // Tenta entrar na discoteca, quando consuege entrar,
     sem_post(&sem_FilaEntradaDisco); // sai da fila de entrada
     // Notificar Acontecimento
     cliente->acontecimento = 00; // Acontecimento: Entrada - Discoteca
@@ -448,52 +492,6 @@ void *rotinaCliente(void *ptr)
 
     // Fecha a tarefa
     pthread_exit(cliente);
-    //___________________________________________________________//
-
-    //________ DAQUI PARA BAXIO È PROVISÓRIO SÒ PARA TESTAR_____//
-    usleep(5000000 + rand() % 9000000); // Espera 5s - TESTE
-
-    // Entrar na Pista Pública:
-    sem_wait(&sem_FilaEntradaPistaD);
-    cliente->acontecimento = 11; // Acontecimento: Espera na Fila - Pista de Dança
-    timespec_get(&ts, TIME_UTC); // Pega no tempo atual e guarda no cliente
-    cliente->tempo = ts.tv_sec;
-    enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
-    usleep(5000000); // Espera 5s - TESTE
-    // Entra na Pista
-    sem_wait(&sem_PistaDanca);        // Entra na pista
-    sem_post(&sem_FilaEntradaPistaD); // Saída da Fila
-    cliente->acontecimento = 01;      // Acontecimento: Entrada - Pista de Dança
-    timespec_get(&ts, TIME_UTC);      // Pega no tempo atual e guarda no cliente
-    cliente->tempo = ts.tv_sec;
-    enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
-    usleep(10000000 + rand() % 9000000); // Espera 15s - TESTE
-    // Sair da fila
-    sem_post(&sem_PistaDanca);   // Saída da Pista de Dança
-    cliente->acontecimento = 31; // Acontecimento: Saída - Pista de Dança
-    timespec_get(&ts, TIME_UTC); // Pega no tempo atual e guarda no cliente
-    cliente->tempo = ts.tv_sec;
-    enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
-    usleep(5000000 + rand() % 9000000); // Espera 5s - TESTE
-
-    // TESTE: SIMULAR SAIDA DA DISCOTECA
-    if ((rand() % 100 + 1) <= disco.prob_ser_expulso) // 1% de chance rand 1-100
-    {
-        sem_post(&sem_Discoteca);    // sai da Discoteca
-        cliente->acontecimento = 39; // Acontecimento: Saída - Expulso
-        timespec_get(&ts, TIME_UTC); // Pega no tempo atual e guarda no cliente
-        cliente->tempo = ts.tv_sec;
-        enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
-    }
-    else
-    {
-        sem_post(&sem_Discoteca);    // sai da Discoteca
-        cliente->acontecimento = 30; // Acontecimento: Saída - Discoteca
-        timespec_get(&ts, TIME_UTC); // Pega no tempo atual e guarda no cliente
-        cliente->tempo = ts.tv_sec;
-        enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
-    }
-    return; // Acaba a tarefa? <-- Provisório, quando acabar a tarefa temos que a destruir
 }
 
 void *RotinaAbrirDiscoteca(void *ptr)
@@ -514,7 +512,12 @@ void *RotinaAbrirDiscoteca(void *ptr)
     {
         timespec_get(&ts, TIME_UTC);
     }
-    discotecaAberta = 1;                      // abre a discoteca
+
+    // Secção Crítica
+    pthread_mutex_lock(&afDiscoteca);
+    discotecaAberta = 1; // abre a discoteca
+    pthread_mutex_unlock(&afDiscoteca);
+
     enviarAcontecimento(0, 60, ts.tv_sec, 1); // Envia o acontecimento de abrir a discoteca id_cliente 0 é o manager
     printf("Discoteca abriu as portas ao público! :)\n");
 
@@ -523,9 +526,17 @@ void *RotinaAbrirDiscoteca(void *ptr)
     {
         timespec_get(&ts, TIME_UTC);
     }
-    discotecaAberta = 0;                      // fecha discoteca
+
+    // Secção Crítica
+    pthread_mutex_lock(&afDiscoteca);
+    discotecaAberta = 2; // fecha discoteca pelo dia
+    pthread_mutex_unlock(&afDiscoteca);
+
     enviarAcontecimento(0, 69, ts.tv_sec, 1); // Envia o acontecimento de abrir a discoteca id_cliente 0 é o manager
     printf("Discoteca fechou as portas ao público! :(\n");
+
+    // Fecha a tarefa
+    pthread_exit(horarioDiscoteca);
 }
 
 int main(void)
@@ -592,6 +603,7 @@ int main(void)
     // Fim da espera para iniciar simulação
 
     // ---> Inicializar os Semáforos <--- // Segundo argumento sem_init a 0, significa que é partilhado entre tarefas
+    pthread_mutex_init(&afDiscoteca, NULL); // Trinco para abrir ou fechar a discoteca;
 
     sem_init(&sem_EnviarAcontMonitor, 0, 1); // Iniciado a 1, exclusão mútua, só uma tarefa é que envia de cada vez o aconteciemento ao monitor
 
