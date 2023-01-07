@@ -131,7 +131,7 @@ str_echo(sockfd) int sockfd;
         printf("  Explusos da Discoteca: %d               \n", totalExpulsos);
         printf(" ________________________________________ \n");
         printf("(________________________________________)\n");
-        printf("(ExpulsoVIP %d___________________________)\n", explusoVIP); //<-- TESTE, APAGAr
+        printf("(ExpulsoVIP %d___________________________)\n", explusoVIP); //<-- TESTE, APAGAR
 
         /* Lê uma linha do socket */ // Linha enviada do simulador
         bzero(line, MAXLINE);        // Limpar Buffer

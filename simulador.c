@@ -16,8 +16,6 @@ char buffer[MAXLINE]; // Iniciar/Fechar Simulação
 int valor;            // Comparar buffer com string
 
 // Sincronização //
-// pthread_mutex_t mutex_wc;
-
 sem_t sem_EnviarAcontMonitor; // Semaforo para o envio de uma mensagem para o monitor, só pode ser enviado uma mensagem de cada vez, iniciado a 1
 
 // Discoteca (zona0, z0)
@@ -211,13 +209,13 @@ void logInicialDisco()
     fprintf(fpLog, "\n*--Acontecimentos da simulação--*\n"
                    "60 : Abertura da Discoteca\n"
                    "69 : Encerramento da Discoteca\n\n"
-                   "00 : Entrada para a Discoteca\n"
-                   "01 : Entrada pista de dança\n"
-                   "02 : Entrada zona VIP\n"
-                   "03 : Entrada na WC\n"
-                   "04 : Entrada no restaurante\n\n"
+                   "00 : Entrada - Discoteca\n"
+                   "01 : Entrada - Pista de Dança\n"
+                   "02 : Entrada - Zona VIP\n"
+                   "03 : Entrada - WC\n"
+                   "04 : Entrada - Restaurante\n\n"
                    "10 : Espera na fila - Discoteca\n"
-                   "11 : Espera na fila - Pista de dança\n"
+                   "11 : Espera na fila - Pista de Dança\n"
                    "12 : Espera na fila - Zona VIP\n"
                    "13 : Espera na fila - WC\n\n"
                    "20 : Desistência da fila - Discoteca\n"
@@ -227,8 +225,10 @@ void logInicialDisco()
                    "30 : Saída - Discoteca\n"
                    "31 : Saída - Pista de Dança\n"
                    "32 : Saída - Zona VIP\n"
-                   "33 : Saída- WC\n"
-                   "34 : Saída - restaurante\n");
+                   "33 : Saída - WC\n"
+                   "34 : Saída - Restaurante\n"
+                   "33 : Saída - Expulso da Zona VIP\n"
+                   "34 : Saída - Expulso da Discoteca\n");
 
     // Preparar para receber os Acontecimentos da simulação:
     fprintf(fpLog, "\n\n* <---> ACONTECIMENTOS DA SIMULAÇÃO <---> *\n\n");
@@ -272,13 +272,13 @@ void printInicialDisco()
     printf("\n*--Acontecimentos da simulação--*\n"
            "60 : Abertura da Discoteca\n"
            "69 : Encerramento da Discoteca\n\n"
-           "00 : Entrada para a Discoteca\n"
-           "01 : Entrada pista de dança\n"
-           "02 : Entrada zona VIP\n"
-           "03 : Entrada na WC\n"
-           "04 : Entrada no restaurante\n\n"
+           "00 : Entrada - Discoteca\n"
+           "01 : Entrada - Pista de Dança\n"
+           "02 : Entrada - Zona VIP\n"
+           "03 : Entrada - WC\n"
+           "04 : Entrada - Restaurante\n\n"
            "10 : Espera na fila - Discoteca\n"
-           "11 : Espera na fila - Pista de dança\n"
+           "11 : Espera na fila - Pista de Dança\n"
            "12 : Espera na fila - Zona VIP\n"
            "13 : Espera na fila - WC\n\n"
            "20 : Desistência da fila - Discoteca\n"
@@ -288,8 +288,10 @@ void printInicialDisco()
            "30 : Saída - Discoteca\n"
            "31 : Saída - Pista de Dança\n"
            "32 : Saída - Zona VIP\n"
-           "33 : Saída- WC\n"
-           "34 : Saída - restaurante\n");
+           "33 : Saída - WC\n"
+           "34 : Saída - Restaurante\n"
+           "33 : Saída - Expulso da Zona VIP\n"
+           "34 : Saída - Expulso da Discoteca\n");
 }
 
 // Envia o acontecimento para o Monitor/ Escreva na logSimulador e print no ecrã do simulador
@@ -785,7 +787,8 @@ int main(void)
         }
         thread_array[i].id_cliente = i + 1; // i=0, id_cliente=1
     }
-    
+
+    // Ciclo Infinito!
     while (1)
     {
     } // Provisório só para manter a simulação a funcionar, depois de já ter criado os 500 clientes!
