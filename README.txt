@@ -27,6 +27,11 @@ util-stream-client.c = simulador_config.c
 
 *---                                                             ---*
 
+Possíveis Problemas:
+Efetuar -ggc version, caso der erro:
+
+*Para conseguir efetuar compilações com gcc no Ubuntu é poderá necessário efetuar a instalação:
+https://linuxize.com/post/how-to-install-gcc-compiler-on-ubuntu-18-04/
 
 Ficheiro de configurações iniciais do Simulador (simulador_config_inicial.txt):
 Limitações:
@@ -62,4 +67,5 @@ Acontecimentos do projeto:
 32 : Saída - Zona VIP
 33 : Saída - WC
 34 : Saída - Restaurante
+38 : Saída - Expulso da Zona VIP
 39 : Saída - Expulso da Discoteca

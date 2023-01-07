@@ -18,6 +18,7 @@ int numDFZ1 = 0; // <--- usado para os logs?
 // Z2 - Zona VIP
 int numZ2 = 0;
 int numFZ2 = 0;
+int explusoVIP = 0;
 
 // Z3 - WC
 int numZ3 = 0;
@@ -25,7 +26,7 @@ int numFZ3 = 0;
 
 // Z4 - Restaurante
 int numZ4 = 0;
-int numFZ4 = 0;
+//int numFZ4 = 0; //Não há fila
 
 // Estado da Discoteca
 char estadoDisco[8] = "FECHADO"; // Aberto ou Fechado, começa simulação a fechado
@@ -118,7 +119,7 @@ str_echo(sockfd) int sockfd;
         printf("                                          \n");
         printf("  WC: %d              Fila: %d            \n", numZ3, numFZ3);
         printf("                                          \n");
-        printf("  Restaurante: %d     Fila: %d            \n", numZ4, numFZ4);
+        printf("  Restaurante: %d     Sem Fila            \n", numZ4/*, numFZ4*/);
         printf(" ________________________________________ \n");
         printf("(___________Informação__Global___________)\n");
         printf("                                          \n");
@@ -130,6 +131,7 @@ str_echo(sockfd) int sockfd;
         printf("  Explusos da Discoteca: %d               \n", totalExpulsos);
         printf(" ________________________________________ \n");
         printf("(________________________________________)\n");
+        printf("(ExpulsoVIP %d___________________________)\n", explusoVIP); //<-- TESTE, APAGAr
 
         /* Lê uma linha do socket */ // Linha enviada do simulador
         bzero(line, MAXLINE);        // Limpar Buffer
@@ -173,7 +175,7 @@ str_echo(sockfd) int sockfd;
             numZ3++;
             break;
         case 04: // Entrada - Restaurante
-            numFZ4--;
+            //numFZ4--;
             numZ4++;
             break;
         case 10: // Espera na fila - Discoteca
@@ -220,6 +222,9 @@ str_echo(sockfd) int sockfd;
             break;
         case 34: // Saída - Restaurante
             numZ4--;
+            break;
+        case 38: // Saída - Expulso da Zona VIP
+            explusoVIP++;
             break;
         case 39: // Saída - Expulso da Discoteca
             numZ0--;
