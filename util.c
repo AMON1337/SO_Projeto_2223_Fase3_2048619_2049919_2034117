@@ -1,7 +1,10 @@
-/* Funções utilit�rias retiradas de "UNIX Networking Programming" */
+/* Ficheiros dados pelos professores,
+   estas funções dão "warnings" ao compilar! */
+
+/* Funções utilitárias retiradas de "UNIX Networking Programming" */
 
 /* Lê nbytes de um ficheiro/socket.
-   Bloqueia at� conseguir ler os nbytes ou dar erro */
+   Bloqueia até conseguir ler os nbytes ou dar erro */
 #include "unix.h"
 
 #include <stdio.h>
@@ -30,7 +33,7 @@ int nbytes;
 }
 
 /* Escreve nbytes num ficheiro/socket.
-   Bloqueia at� conseguir escrever os nbytes ou dar erro */
+   Bloqueia até conseguir escrever os nbytes ou dar erro */
 
 int writen(fd, ptr, nbytes)
 int fd;
@@ -52,8 +55,8 @@ int nbytes;
 	return (nbytes - nleft);
 }
 
-/* L� uma linha de um ficheiro/socket (at� \n, maxlen ou \0).
-   Bloqueia at� ler a linha ou dar erro.
+/* Lê uma linha de um ficheiro/socket (até \n, maxlen ou \0).
+   Bloqueia até ler a linha ou dar erro.
    Retorna quantos caracteres conseguiu ler */
 
 int readline(fd, ptr, maxlen)
@@ -83,7 +86,7 @@ int maxlen;
 			return (-1);
 	}
 
-	/* N�o esquecer de terminar a string */
+	/* Não esquecer de terminar a string */
 
 	*ptr = 0;
 
@@ -92,10 +95,6 @@ int maxlen;
 
 	return (n);
 }
-
-
-//#include <stdio.h> 
-//#include <errno.h>
 
 /* Mensagem de erro */
 

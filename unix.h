@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-// bibliotecas uteis para o projeto
+// Bibliotecas úteis para o nosso Projeto
 #include <stdbool.h> //Poder usar bools
 #include <string.h>  //Poder usar srings
 

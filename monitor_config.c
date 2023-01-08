@@ -76,6 +76,8 @@ void logMonitor()
         return;
     }
     fprintf(fpLog, "!--------------------- LOGS DO MONITOR -------------------!\n\n");
+    fprintf(fpLog, " Clientes/Tarefas criados <%d>                              \n", totalDisco + numDFZ0);
+    fprintf(fpLog, "                                                           \n");
     fprintf(fpLog, "                   ->Informação Global<-                   \n");
     fprintf(fpLog, " Entraram na Discoteca: %d                                 \n", totalDisco);
     fprintf(fpLog, " Sairam da Discoteca: %d                                   \n", saidaDisco);
@@ -184,12 +186,12 @@ str_echo(sockfd) int sockfd;
         switch (acontecimento)
         {
         case 60: // Abertura da Discoteca
-            estadoDisco[8] = '/0';
+            estadoDisco[8] = '\0';
             strcpy(estadoDisco, "ABERTO");
             tempoDiscoAbriu = tempo; // tempo recebido
             break;
         case 69: // Encerramento da Discoteca
-            estadoDisco[8] = '/0';
+            estadoDisco[8] = '\0';
             strcpy(estadoDisco, "FECHADO");
             tempoDiscoFechou = tempo; // tempo recebido
             break;
@@ -335,6 +337,8 @@ str_echo(sockfd) int sockfd;
             logMonitor();
             printf("\nSimulação acabou.\n");
             printf("Logs do Monitor criadas!\n");
+
+            close(sockfd);
             break;
         }
     }

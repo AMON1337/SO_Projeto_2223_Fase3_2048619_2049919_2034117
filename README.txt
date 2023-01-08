@@ -1,7 +1,3 @@
-NOTA:   ALTERAR OS PRINTS COM OS ACONTECIMENTOS, estão desatualizados!
-NOTA2:  Discutir o menu final do simulador!
-NOTA4:  Novo Acontecimento saiuDisco depois da Disco fechar?
-
 Projeto SO 22/23 Simulação de uma discoteca!
 Alunos: 
 Filipe Lopes - 2048619
@@ -28,7 +24,7 @@ util-stream-client.c = simulador_config.c
 
 *---                                                             ---*
 
-Possíveis Problemas:
+Possível problema, utilizador de MAC!
 Efetuar -ggc version, caso der erro:
 
 *Para conseguir efetuar compilações com gcc no Ubuntu é poderá necessário efetuar a instalação:
@@ -41,10 +37,11 @@ Limitações (Não pode alterar):
     Não colocar a fila_max de qualquer zona a 0.
 
 Pode fazer (pode alterar):
-    Alterar a Capacidade de cada zona e da fila.
+    Alterar a Capacidade de cada Zona e respetiva Fila.
     Alterar as Probabilidades.
 
-Acontecimentos do projeto:
+
+Acontecimentos do projeto
 
 60 : Abertura da Discoteca
 69 : Encerramento da Discoteca

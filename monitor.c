@@ -15,18 +15,18 @@ main(void)
     if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
         err_dump("monitor: can't open stream socket");
 
-    /* Primeiro uma limpeza preventiva!
-       Dados para o socket stream: tipo + nome do ficheiro.
-         O ficheiro serve para que os clientes possam identificar o servidor */
+    /*  Primeiro uma limpeza preventiva!
+        Dados para o socket stream: tipo + nome do ficheiro.
+        O ficheiro serve para que os clientes possam identificar o servidor */
 
     bzero((char *)&serv_addr, sizeof(serv_addr));
     serv_addr.sun_family = AF_UNIX;
     strcpy(serv_addr.sun_path, UNIXSTR_PATH);
 
-    /* O servidor � quem cria o ficheiro que identifica o socket.
+    /* O servidor é quem cria o ficheiro que identifica o socket.
        Elimina o ficheiro, para o caso de algo ter ficado pendurado.
        Em seguida associa o socket ao ficheiro.
-       A dimens�o a indicar ao bind n�o � a da estrutura, pois depende
+       A dimensão a indicar ao bind não é a da estrutura, pois depende
        do nome do ficheiro */
 
     servlen = strlen(serv_addr.sun_path) + sizeof(serv_addr.sun_family);
@@ -38,16 +38,16 @@ main(void)
 
     listen(sockfd, 5);
 
-    // TEXTO EXTRA AO INCIAR - NÃO ESSENCIAL para o funcionamento dos sockets
+    // Texto extra ao iniciar - NÃO ESSENCIAL para o funcionamento dos sockets
     system("clear");                                    // limpar a consola
     printf("Monitor ONLINE\n");                         // Texto para dizer que o monitor está ligado
     printf("Esperando a ligação com o simulador...\n"); // Texto para dizer que o monitor está ligado
-    // TEXTO EXTRA AO INCIAR - NÃO ESSENCIAL para o funcionamento dos sockets
+    // Texto extra ai iniciar - NÃO ESSENCIAL para o funcionamento dos sockets
 
     for (;;)
     {
 
-        /* N�o esquecer que quando o servidor aceita um cliente cria um
+        /* Não esquecer que quando o servidor aceita um cliente cria um
            socket para comunicar com ele. O primeiro socket (sockfd) fica
            � espera de mais clientes */
 
@@ -57,7 +57,7 @@ main(void)
         if (newsockfd < 0)
             err_dump("monitor: accept error");
 
-        /* Lan�a processo filho para lidar com o cliente */
+        /* Lança processo filho para lidar com o cliente */
 
         if ((childpid = fork()) < 0)
             err_dump("monitor: fork error");
@@ -66,7 +66,7 @@ main(void)
         {
 
             /* Processo filho que vai atender o cliente.
-               Fechar sockfd � sanit�rio, j� que n�o �
+               Fechar sockfd é sanitário, já que não é
                utilizado pelo processo filho.
                Os dados recebidos do cliente s�o reenviados
                para o cliente */
@@ -77,7 +77,7 @@ main(void)
         }
 
         /* Processo pai.
-           Fechar newsockfd � sanit�rio, j� que n�o �
+           Fechar newsockfd é sanitário, já que não é
            utilizado pelo processo pai */
 
         close(newsockfd);
