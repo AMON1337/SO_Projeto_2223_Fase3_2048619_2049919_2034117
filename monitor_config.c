@@ -17,12 +17,13 @@ int numZ1 = 0;
 int numFZ1 = 0;
 int numDFZ1 = 0; // log
 int numTZ1 = 0;  // log
-
+int numFCZ1 = 0; // log
 // Z2 - Zona VIP
 int numZ2 = 0;
 int numFZ2 = 0;
 int numDFZ2 = 0;     // log
 int numTZ2 = 0;      // log
+int numFCZ2 = 0;     // log
 int expulsosVIP = 0; // log
 
 // Z3 - WC
@@ -30,11 +31,14 @@ int numZ3 = 0;
 int numFZ3 = 0;
 int numDFZ3 = 0; // log
 int numTZ3 = 0;  // log
+int numFCZ3 = 0; // log
 
 // Z4 - Restaurante
 int numZ4 = 0;
-// Não há fila no restaurante
-int numTZ4 = 0; // log
+int numFZ4 = 0;  // Buffet
+int numTZ4 = 0;  // log
+int numTFZ4 = 0; // log
+int numFCZ4 = 0; // log
 
 // Estado da Discoteca
 char estadoDisco[8] = "FECHADO"; // Aberto ou Fechado, começa simulação a fechado
@@ -85,6 +89,7 @@ void logMonitor()
     fprintf(fpLog, " Zona 2 - Zona VIP: %d                                     \n", numTZ2);
     fprintf(fpLog, " Zona 3 - WC: %d                                           \n", numTZ3);
     fprintf(fpLog, " Zona 4 - Restaurante: %d                                  \n", numTZ4);
+    fprintf(fpLog, " Zona 4 - Restaurante-Buffet: %d                           \n", numTFZ4);
     fprintf(fpLog, "                                                           \n");
     fprintf(fpLog, "            ->Número de Desistências nas Filas<-           \n");
     fprintf(fpLog, " Desistiram da Fila da Discoteca: %d                       \n", numDFZ0);
@@ -92,9 +97,16 @@ void logMonitor()
     fprintf(fpLog, " Desistiram da Fila da Zona VIP: %d                        \n", numDFZ2);
     fprintf(fpLog, " Desistiram da Fila da WC: %d                              \n", numDFZ3);
     fprintf(fpLog, "                                                           \n");
+    fprintf(fpLog, "->Número de vezes que os clientes encontraram as Filas cheias<-\n");
+    fprintf(fpLog, " Zona 1 - Pista de Dança: %d                               \n", numFCZ1);
+    fprintf(fpLog, " Zona 2 - Zona VIP: %d                                     \n", numFCZ2);
+    fprintf(fpLog, " Zona 3 - WC: %d                                           \n", numFCZ3);
+    fprintf(fpLog, " Zona 4 - Restaurante: %d                                  \n", numFCZ4);
+    fprintf(fpLog, "                                                           \n");
     fprintf(fpLog, "          ->Informação sobre o tempo da Simulação<-        \n");
     fprintf(fpLog, " Discoteca aberta durante: %d segundos                     \n", tempoDiscoFechou - tempoDiscoAbriu);
     fprintf(fpLog, " Último cliente saiu %d segundos depois da Discoteca abrir \n", tempoDiscoRealFechou - tempoDiscoAbriu);
+    fprintf(fpLog, " Discoteca ficou vazia %d segundos depois de fechar        \n", tempoDiscoRealFechou - tempoDiscoFechou);
     fprintf(fpLog, "!---------------------------------------------------------!\n\n");
     fclose(fpLog);
 }
@@ -207,6 +219,10 @@ str_echo(sockfd) int sockfd;
             numZ4++;
             numTZ4++;
             break;
+        case 05:       // Entrada - Restaurante-Buffet
+            numFZ4++;  // Buffet
+            numTFZ4++; // Buffet
+            break;
         case 10: // Espera na fila - Discoteca
             numFZ0++;
             break;
@@ -255,6 +271,9 @@ str_echo(sockfd) int sockfd;
         case 34: // Saída - Restaurante
             numZ4--;
             break;
+        case 35:      // Saída - Restaurane-Buffet
+            numFZ4--; // Buffet
+            break;
         case 38: // Saída - Expulso da Zona VIP
             expulsosVIP++;
             break;
@@ -262,6 +281,18 @@ str_echo(sockfd) int sockfd;
             numZ0--;
             saidaDisco++;
             totalExpulsos++;
+            break;
+        case 41: // Fila cheia - Pista de Dança
+            numFCZ1++;
+            break;
+        case 42: // Fila cheia - Zona VIP
+            numFCZ2++;
+            break;
+        case 43: // Fila cheia - WC
+            numFCZ3++;
+            break;
+        case 44: // Fila cheia - Restaurante
+            numFCZ4++;
             break;
         default: // Outro Acontecimento // ERRO
             printf("ERRO: Acontecimento Inválido! \n");
@@ -274,6 +305,7 @@ str_echo(sockfd) int sockfd;
         printf("(_______________INFORMAÇÃO_______________)\n");
         printf("                                          \n");
         printf("  Discoteca: %d       Fila: %d            \n", numZ0, numFZ0);
+        printf(" ________________________________________ \n");
         printf("                                          \n");
         printf("  Pista de Dança: %d  Fila: %d            \n", numZ1, numFZ1);
         printf("                                          \n");
@@ -281,7 +313,7 @@ str_echo(sockfd) int sockfd;
         printf("                                          \n");
         printf("  WC: %d              Fila: %d            \n", numZ3, numFZ3);
         printf("                                          \n");
-        printf("  Restaurante: %d     Sem Fila            \n", numZ4);
+        printf("  Restaurante: %d     Buffet: %d          \n", numZ4, numFZ4);
         printf(" ________________________________________ \n");
         printf("(___________Informação__Global___________)\n");
         printf("                                          \n");
@@ -295,9 +327,8 @@ str_echo(sockfd) int sockfd;
         printf("(________________________________________)\n");
         /*/------------------! MONITOR !------------------/*/
 
-        /* Verifica se a simulação já acabou, ou seja, todos os clientes
-            já sairam da Discoteca */
-        // Imprime info da discoteca depois dela ter fechado
+        /* Verifica se a simulação já acabou, ou seja, todos os clientes já sairam da Discoteca */
+        // Imprime info da discoteca depois dela ter fechado para o logMonitor.log
         if (numZ0 == 0 && numFZ0 == 0)
         {
             tempoDiscoRealFechou = tempo; // tempo que saiu o ultimo cliente

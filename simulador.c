@@ -15,23 +15,37 @@ int n;                // Número de caracteres
 char buffer[MAXLINE]; // Iniciar/Fechar Simulação
 int valor;            // Comparar buffer com string
 
-// Sincronização //
+// Sincronização das ZONAS //
 sem_t sem_EnviarAcontMonitor; // Semaforo para o envio de uma mensagem para o monitor, só pode ser enviado uma mensagem de cada vez, iniciado a 1
 
 // Discoteca (zona0, z0)
-sem_t sem_FilaEntradaDisco; // Semaforo da fila de espera da discoteca
-sem_t sem_Discoteca;        // Semaforo das pessoas que estão dentro da discoteca
+sem_t sem_FilaDiscoteca; // Semaforo da fila de espera da discoteca
+sem_t sem_Discoteca;     // Semaforo das pessoas que estão dentro da discoteca
 // Pista de Dança (zona1, z1)
-sem_t sem_FilaEntradaPistaD; // Semaforo da fila de espera da pista de dança
-sem_t sem_PistaDanca;        // Semaforo das pessoas que estão na pista de dança
+sem_t sem_FilaPistaDanca; // Semaforo da fila de espera da pista de dança
+sem_t sem_PistaDanca;     // Semaforo das pessoas que estão na pista de dança
 // Zona VIP (zona2, z2)
 sem_t sem_FilaZonaVIP; // Semaforo da fila de espera da zona vip
 sem_t sem_ZonaVIP;     // Semaforo das pessoas que estão na zona vip
-// WC(zona3, z3)
+// WC (zona3, z3)
 sem_t sem_FilaWC; // Semaforo da fila de espera da WC
 sem_t sem_WC;     // Semaforo das pessoas que estão na WC
 // Restaurante (zona4, z4)
-sem_t sem_Restaurante; // Semaforo das pessoas que estão no restaurante
+sem_t sem_Restaurante;       // Semaforo das pessoas que estão no restaurante
+sem_t sem_RestauranteBuffet; // Semafor das pessoas que estão no buffet
+
+// Mutex/Trincos para verificar se as filas das zonas estão cheias
+/* Zona 0 (discoteca) não faz mal as pessoas esperarem para entrar na fila
+   porque queremos que todos os clientes tentem entrar na discoteca*/
+pthread_mutex_t mutex_nClientes_Fila_PistaDanca;
+pthread_mutex_t mutex_nClientes_Fila_ZonaVIP;
+pthread_mutex_t mutex_nClientes_Fila_WC;
+pthread_mutex_t mutex_nClientes_Restaurante;
+// Variáveis protegidas pelos trincos
+int nClientes_Fila_PistaDanca = 0;
+int nClientes_Fila_ZonaVIP = 0;
+int nClientes_Fila_WC = 0;
+int nClientes_Restaurante = 0;
 
 // Estruturas de dados //
 typedef struct cliente
@@ -68,11 +82,10 @@ typedef struct discoteca
 
 struct discoteca disco; // Estado interno da nossa DISCOTECA
 
+//  Alterar o número de clientes tem de alterar todos estes valores igualmente, senão vai dar erro!
 struct cliente thread_array[500]; // Serão criados 500 tarefas/clientes
-
-pthread_t threads[500]; // Serão criados 500 tarefas/clientes
-
-int capacidadeDisco = 500; // Utilizado para criar tarefas no int main();
+pthread_t threads[500];           // Serão criados 500 tarefas/clientes
+int capacidadeDisco = 500;        // Utilizado para criar tarefas no int main();
 
 int tarefasExit = 0;               // Número de tarefas que foram destruídas
 pthread_mutex_t mutex_tarefasExit; // Trinco para a seccção crítica
@@ -216,7 +229,8 @@ void logInicialDisco()
                    "01 : Entrada - Pista de Dança\n"
                    "02 : Entrada - Zona VIP\n"
                    "03 : Entrada - WC\n"
-                   "04 : Entrada - Restaurante\n\n"
+                   "04 : Entrada - Restaurante\n"
+                   "05 : Entrada - Restaurante-Buffet\n\n"
                    "10 : Espera na fila - Discoteca\n"
                    "11 : Espera na fila - Pista de Dança\n"
                    "12 : Espera na fila - Zona VIP\n"
@@ -230,8 +244,13 @@ void logInicialDisco()
                    "32 : Saída - Zona VIP\n"
                    "33 : Saída - WC\n"
                    "34 : Saída - Restaurante\n"
+                   "35 : Saída - Restaurante-Buffet\n"
                    "38 : Saída - Expulso da Zona VIP\n"
-                   "39 : Saída - Expulso da Discoteca\n");
+                   "39 : Saída - Expulso da Discoteca\n\n"
+                   "41 : Fila cheia - Pista de Dança\n"
+                   "42 : Fila cheia - Zona VIP\n"
+                   "43 : Fila cheia - WC\n"
+                   "44 : Fila cheia - Restaurante\n\n");
 
     // Preparar para receber os Acontecimentos da simulação:
     fprintf(fpLog, "\n\n* <---> ACONTECIMENTOS DA SIMULAÇÃO <---> *\n\n");
@@ -279,7 +298,8 @@ void printInicialDisco()
            "01 : Entrada - Pista de Dança\n"
            "02 : Entrada - Zona VIP\n"
            "03 : Entrada - WC\n"
-           "04 : Entrada - Restaurante\n\n"
+           "04 : Entrada - Restaurante\n"
+           "05 : Entrada - Restaurante-Buffet\n\n"
            "10 : Espera na fila - Discoteca\n"
            "11 : Espera na fila - Pista de Dança\n"
            "12 : Espera na fila - Zona VIP\n"
@@ -293,8 +313,13 @@ void printInicialDisco()
            "32 : Saída - Zona VIP\n"
            "33 : Saída - WC\n"
            "34 : Saída - Restaurante\n"
+           "35 : Saída - Restaurante-Buffet\n"
            "38 : Saída - Expulso da Zona VIP\n"
-           "39 : Saída - Expulso da Discoteca\n");
+           "39 : Saída - Expulso da Discoteca\n\n"
+           "41 : Fila cheia - Pista de Dança\n"
+           "42 : Fila cheia - Zona VIP\n"
+           "43 : Fila cheia - WC\n"
+           "44 : Fila cheia - Restaurante\n\n");
 }
 
 // Envia o acontecimento para o Monitor/ Escreva na logSimulador e print no ecrã do simulador
@@ -306,7 +331,7 @@ void enviarAcontecimento(int id_cliente, int acontecimento, int tempo, int vip)
     bzero(buffer, MAXLINE);                                                  // limpa o buffer
     sprintf(buffer, "%d.%d.%d.%d\n", id_cliente, acontecimento, tempo, vip); // coloca mensagem no buffer
 
-    str_cli(buffer, sockfd); // Envia a mensagem <-- tenho que alterar isto!
+    str_cli(buffer, sockfd); // Envia a mensagem (acontecimento) para o monitor!
 
     // Escreve o Acontecimento no logSimulador.log
     FILE *fpLog = fopen("logSimulador.log", "a+"); // Abrir e/ou criar o ficheiro logs para escrever
@@ -318,7 +343,7 @@ void enviarAcontecimento(int id_cliente, int acontecimento, int tempo, int vip)
     fprintf(fpLog, "Cliente ID: %d, Acontecimento: %d, Tempo: %d, VIP: %d\n", id_cliente, acontecimento, tempo, vip);
     fclose(fpLog);
 
-    // Print no ecrâ no simulador o acontecimento
+    // Print do acontecimento no ecrâ no simulador
     printf("Cliente ID: %d, Acontecimento: %d, Tempo: %d, VIP: %d\n", id_cliente, acontecimento, tempo, vip);
 
     sem_post(&sem_EnviarAcontMonitor); // Assinala o semaforo para a próxima tarefa
@@ -334,17 +359,19 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
     // Escolha de zona: 1 - Pista de Dança, 2 - Zona VIP, 3 - WC ou 4 - Restaurante
     escolha = rand() % 4 + 1; // Escolher número random de 1 a 4
 
-    // Modificador de escolha: VIP-> zona VIP, no VIP -> pista de Dança
+    // Modificador de escolha: VIP-> zona VIP, não VIP -> pista de Dança
     if (cliente->vip == 0) // Não é VIP
     {
-        modificador = rand() % 2; // 50% de chance de escolher 0 ou 1
-        if (modificador == 0)     // escolhe 0
-            escolha = 1;          // Cliente  Não VIP muda a escolha de zona para a pista de Dança
+        // modificador = rand() % 2; // 50% de chance de escolher 0 ou 1
+        modificador = rand() % 3; // 66% de chance de escolher 0 ou 1, 33% de escolher 2
+        // if (modificador == 0)     // saiu 0
+        if (modificador != 2) // saiu 0 ou 1
+            escolha = 1;      // Cliente  Não VIP muda a escolha de zona para a pista de Dança
     }
     else if (cliente->vip == 1) // É VIP
     {
-        modificador = rand() % 2; // 50% de chance de escolher 0, 0 ou 1
-        if (modificador == 0)     // escolhe 0
+        modificador = rand() % 2; // 50% de chance de escolher 0 ou 1
+        if (modificador == 0)     // saiu 0
             escolha = 2;          // Cliente VIP muda a escolha de zona para a zona VIP
     }
 
@@ -352,9 +379,32 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
     {
     case 1: // Pista de Dança
 
-        // MUTEX Verificar se pode ir para a fila?
+        // Verifica se tem espaço na fila
+        // Secção crítica
+        pthread_mutex_lock(&mutex_nClientes_Fila_PistaDanca);
+        if (nClientes_Fila_PistaDanca == disco.z1_fila_max) // Caso a fila esteje cheia
+        {
+            pthread_mutex_unlock(&mutex_nClientes_Fila_PistaDanca); // Desbloqueia o trinco
+
+            // Notificar Acontecimento
+            cliente->acontecimento = 41; // Acontecimento: Fila cheia - Pista de Dança
+            timespec_get(&ts, TIME_UTC); // Tempo atual
+            cliente->tempo = ts.tv_sec;
+            enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
+            RotinaClienteDiscoteca(cliente); // chama função, ou seja, "O cliente volta a escolher onde quer ir!"
+        }
+        pthread_mutex_unlock(&mutex_nClientes_Fila_PistaDanca);
+
         // Entrar na Fila de Espera da Pista de Dança
-        sem_wait(&sem_FilaEntradaPistaD); // Entra na fila de espera da pista de dança
+        sem_wait(&sem_FilaPistaDanca); // Entra na fila de espera da pista de dança
+
+        // Atualizar varíavel nClientes na fila da Pista de Dança
+        // Secção Crítica
+        pthread_mutex_lock(&mutex_nClientes_Fila_PistaDanca);
+        nClientes_Fila_PistaDanca++; // +1 cliente na fila
+        pthread_mutex_unlock(&mutex_nClientes_Fila_PistaDanca);
+
         // Notificar Acontecimento
         cliente->acontecimento = 11; // Acontecimento: Espera na fila - Pista de Dança
         timespec_get(&ts, TIME_UTC); // Tempo atual
@@ -366,7 +416,14 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
         if ((rand() % 100 + 1) <= disco.prob_desistir_fila)
         {
             // Desistiu da fila!
-            sem_post(&sem_FilaEntradaPistaD); // Sai da Fila de espera da pista de dança
+            sem_post(&sem_FilaPistaDanca); // Sai da Fila de espera da pista de dança
+
+            // Atualizar varíavel nClientes na fila da Pista de Dança
+            // Secção Crítica
+            pthread_mutex_lock(&mutex_nClientes_Fila_PistaDanca);
+            nClientes_Fila_PistaDanca--; // -1 cliente na fila
+            pthread_mutex_unlock(&mutex_nClientes_Fila_PistaDanca);
+
             // Notificar Acontecimento
             cliente->acontecimento = 21; // Acontecimento: Desistência da fila - Pista de Dança
             timespec_get(&ts, TIME_UTC); // Tempo atual
@@ -376,8 +433,15 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
         }
 
         // Cliente quer continuar na fila!
-        sem_wait(&sem_PistaDanca);        // Entra na pista de dança
-        sem_post(&sem_FilaEntradaPistaD); // Saída da Fila de espera da pista de dança
+        sem_wait(&sem_PistaDanca);     // Entra na pista de dança
+        sem_post(&sem_FilaPistaDanca); // Saída da Fila de espera da pista de dança
+
+        // Atualizar varíavel nClientes na fila da Pista de Dança
+        // Secção Crítica
+        pthread_mutex_lock(&mutex_nClientes_Fila_PistaDanca);
+        nClientes_Fila_PistaDanca--; // -1 cliente na fila de espera
+        pthread_mutex_unlock(&mutex_nClientes_Fila_PistaDanca);
+
         // Notificar Acontecimento
         cliente->acontecimento = 01; // Acontecimento: Entrada - Pista de Dança
         timespec_get(&ts, TIME_UTC); // Tempo atual
@@ -386,6 +450,7 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
 
         // Cliente diverte-se na pista de dança...
         usleep(5000000 + rand() % 10000000); // Tempo de  diversão 5 + 0-10s
+
         // Cliente cansado de Dançar, quer sair da Pista de Dança!
         sem_post(&sem_PistaDanca); // Saída da Pista de Dança
         // Notificar Acontecimento
@@ -397,6 +462,7 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
 
     case 2: // Zona VIP
 
+        // Verifica se o Cliente é VIP
         if (cliente->vip == 0) // Cliente não é VIP, não pode entrar na zona vip
         {
             // Tentou entrar na zona vip sem ser vip é expulso da zona
@@ -408,10 +474,32 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
             break;
         }
 
-        // MUTEX Verificar se pode ir para a fila?
+        // Verifica se tem espaço na fila
+        // Secção crítica
+        pthread_mutex_lock(&mutex_nClientes_Fila_ZonaVIP);
+        if (nClientes_Fila_ZonaVIP == disco.z2_fila_max) // Caso a fila esteje cheia
+        {
+            pthread_mutex_unlock(&mutex_nClientes_Fila_ZonaVIP); // Desbloqueia o trinco
+
+            // Notificar Acontecimento
+            cliente->acontecimento = 42; // Acontecimento: Fila cheia - Zona VIP
+            timespec_get(&ts, TIME_UTC); // Tempo atual
+            cliente->tempo = ts.tv_sec;
+            enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
+            RotinaClienteDiscoteca(cliente); // chama função, ou seja, "O cliente volta a escolher onde quer ir!"
+        }
+        pthread_mutex_unlock(&mutex_nClientes_Fila_ZonaVIP);
 
         // Entrar na Fila de Espera da Zona VIP
         sem_wait(&sem_FilaZonaVIP); // Entra na fila de espera da zona vip
+
+        // Atualizar varíavel nClientes na fila da zona VIP
+        // Secção Crítica
+        pthread_mutex_lock(&mutex_nClientes_Fila_ZonaVIP);
+        nClientes_Fila_ZonaVIP++; // +1 cliente na fila
+        pthread_mutex_unlock(&mutex_nClientes_Fila_ZonaVIP);
+
         // Notificar Acontecimento
         cliente->acontecimento = 12; // Acontecimento: Espera na fila - Zona VIP
         timespec_get(&ts, TIME_UTC); // Tempo atual
@@ -424,6 +512,13 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
         {
             // Desistiu da fila!
             sem_post(&sem_FilaZonaVIP); // Sai da Fila de espera da zona vip
+
+            // Atualizar varíavel nClientes na fila da zona VIP
+            // Secção Crítica
+            pthread_mutex_lock(&mutex_nClientes_Fila_ZonaVIP);
+            nClientes_Fila_ZonaVIP--; // -1 cliente na fila
+            pthread_mutex_unlock(&mutex_nClientes_Fila_ZonaVIP);
+
             // Notificar Acontecimento
             cliente->acontecimento = 22; // Acontecimento: Desistência da fila - Zona VIP
             timespec_get(&ts, TIME_UTC); // Tempo atual
@@ -435,6 +530,13 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
         // Cliente quer continuar na fila!
         sem_wait(&sem_ZonaVIP);     // Entra na zona VIP
         sem_post(&sem_FilaZonaVIP); // Saída da Fila de espera da zona vip
+
+        // Atualizar varíavel nClientes na fila da zona VIP
+        // Secção Crítica
+        pthread_mutex_lock(&mutex_nClientes_Fila_ZonaVIP);
+        nClientes_Fila_ZonaVIP--; // -1 cliente na fila
+        pthread_mutex_unlock(&mutex_nClientes_Fila_ZonaVIP);
+
         // Notificar Acontecimento
         cliente->acontecimento = 02; // Acontecimento: Entrada - Zona VIP
         timespec_get(&ts, TIME_UTC); // Tempo atual
@@ -443,6 +545,7 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
 
         // Cliente diverte-se na zona VIP
         usleep(5000000 + rand() % 10000000); // Tempo de  diversão 5 + 0-10s
+
         // Cliente cansado de conviver com VIPs...
         sem_post(&sem_ZonaVIP); // Saída da Zona VIP
         // Notificar Acontecimento
@@ -454,8 +557,32 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
 
     case 3: // WC
 
+        // Verifica se tem espaço na fila
+        // Secção crítica
+        pthread_mutex_lock(&mutex_nClientes_Fila_WC);
+        if (nClientes_Fila_WC == disco.z3_fila_max) // Caso a fila esteje cheia
+        {
+            pthread_mutex_unlock(&mutex_nClientes_Fila_WC); // Desbloqueia o trinco
+
+            // Notificar Acontecimento
+            cliente->acontecimento = 43; // Acontecimento: Fila cheia - WC
+            timespec_get(&ts, TIME_UTC); // Tempo atual
+            cliente->tempo = ts.tv_sec;
+            enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
+            RotinaClienteDiscoteca(cliente); // chama função, ou seja, "O cliente volta a escolher onde quer ir!"
+        }
+        pthread_mutex_unlock(&mutex_nClientes_Fila_WC);
+
         // Entrar na Fila de Espera da WC
         sem_wait(&sem_FilaWC); // Entra na fila de espera da WC
+
+        // Atualizar varíavel nClientes na fila da WC
+        // Secção Crítica
+        pthread_mutex_lock(&mutex_nClientes_Fila_WC);
+        nClientes_Fila_WC++; // +1 cliente na fila
+        pthread_mutex_unlock(&mutex_nClientes_Fila_WC);
+
         // Notificar Acontecimento
         cliente->acontecimento = 13; // Acontecimento: Espera na fila - WC
         timespec_get(&ts, TIME_UTC); // Tempo atual
@@ -468,6 +595,13 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
         {
             // Desistiu da fila de espera !
             sem_post(&sem_FilaWC); // Sai da Fila de espera da WC
+
+            // Atualizar varíavel nClientes na fila da WC
+            // Secção Crítica
+            pthread_mutex_lock(&mutex_nClientes_Fila_WC);
+            nClientes_Fila_WC--; // -1 cliente na fila
+            pthread_mutex_unlock(&mutex_nClientes_Fila_WC);
+
             // Notificar Acontecimento
             cliente->acontecimento = 23; // Acontecimento: Desistência da fila - WC
             timespec_get(&ts, TIME_UTC); // Tempo atual
@@ -479,6 +613,13 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
         // Cliente quer continuar na fila!
         sem_wait(&sem_WC);     // Entra na WC
         sem_post(&sem_FilaWC); // Saída da fila de espera da WC
+
+        // Atualizar varíavel nClientes na fila da WC
+        // Secção Crítica
+        pthread_mutex_lock(&mutex_nClientes_Fila_WC);
+        nClientes_Fila_WC--; // -1 cliente na fila
+        pthread_mutex_unlock(&mutex_nClientes_Fila_WC);
+
         // Notificar Acontecimento
         cliente->acontecimento = 03; // Acontecimento: Entrada - WC
         timespec_get(&ts, TIME_UTC); // Tempo atual
@@ -497,18 +638,71 @@ void RotinaClienteDiscoteca(struct cliente *cliente)
         break;
     case 4: // Restaurante;
 
+        // Verifica se tem espaço na fila
+        // Secção crítica
+        pthread_mutex_lock(&mutex_nClientes_Restaurante);
+        if (nClientes_Restaurante == disco.z4_max) // Caso o restaurante esteje cheio
+        {
+            pthread_mutex_unlock(&mutex_nClientes_Restaurante); // Desbloqueia o trinco
+
+            // Notificar Acontecimento
+            cliente->acontecimento = 44; // Acontecimento: Fila cheia - Restaurante
+            timespec_get(&ts, TIME_UTC); // Tempo atual
+            cliente->tempo = ts.tv_sec;
+            enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
+            RotinaClienteDiscoteca(cliente); // chama função, ou seja, "O cliente volta a escolher onde quer ir!"
+        }
+        pthread_mutex_unlock(&mutex_nClientes_Restaurante);
+
         // Entrada no Restaurante
         sem_wait(&sem_Restaurante);
+
+        // Atualizar varíavel nClientes no Restaurante
+        // Secção Crítica
+        pthread_mutex_lock(&mutex_nClientes_Restaurante);
+        nClientes_Restaurante++; // +1 cliente no restaurante
+        pthread_mutex_unlock(&mutex_nClientes_Restaurante);
+
         // Notificar Acontecimento
         cliente->acontecimento = 04; // Acontecimento: Entrada - Restaurante
         timespec_get(&ts, TIME_UTC); // Tempo atual
         cliente->tempo = ts.tv_sec;
         enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
 
+        // Vai buscar comida ao Buffet
+        sem_wait(&sem_RestauranteBuffet);
+
+        // Notificar Acontecimento
+        cliente->acontecimento = 05; // Acontecimento: Entrada - Restaurante-Buffet
+        timespec_get(&ts, TIME_UTC); // Tempo atual
+        cliente->tempo = ts.tv_sec;
+        enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
+        usleep(1000000 + rand() % 1000000); // tempo a ir buscar o buffet 1s + 0-1s
+
+        // Já tem a comida e volta para a sua mesa
+        sem_post(&sem_RestauranteBuffet);
+
+        // Notificar Acontecimento
+        cliente->acontecimento = 35; // Acontecimento: Saída - Restaurante-Buffet
+        timespec_get(&ts, TIME_UTC); // Tempo atual
+        cliente->tempo = ts.tv_sec;
+        enviarAcontecimento(cliente->id_cliente, cliente->acontecimento, cliente->tempo, cliente->vip);
+
+        // Cliente volta para a sua mesa
         // Cliente come a sua refeição
         usleep(1000000 + rand() % 2000000); // Tempo necessário 1s + 0-2s
-        // Cliente acabou a sua refeição
-        sem_post(&sem_Restaurante);
+
+        // Cliente acabou de comer a sua refeição
+        sem_post(&sem_Restaurante); // Cliente sai do Restaurante
+
+        // Atualizar varíavel nClientes no Restaurante
+        // Secção Crítica
+        pthread_mutex_lock(&mutex_nClientes_Restaurante);
+        nClientes_Restaurante--; // -1 cliente no restaurante
+        pthread_mutex_unlock(&mutex_nClientes_Restaurante);
+
         // Notificar Acontecimento
         cliente->acontecimento = 34; // Acontecimento: Saída - Restaurante
         timespec_get(&ts, TIME_UTC); // Tempo atual
@@ -596,7 +790,7 @@ void *rotinaCliente(void *ptr)
         cliente->vip = 0; // NO VIP
 
     // Cliente entra na fila para a discoteca
-    sem_wait(&sem_FilaEntradaDisco); // Entra na fila de espera
+    sem_wait(&sem_FilaDiscoteca); // Entra na fila de espera
     // Notificar Acontecimento
     cliente->acontecimento = 10; // Acontecimento: Espera na fila - Discoteca
     timespec_get(&ts, TIME_UTC); // Pega no tempo atual e guarda no cliente
@@ -620,8 +814,8 @@ void *rotinaCliente(void *ptr)
         {
             pthread_mutex_unlock(&mutex_afDiscoteca); // Liberta o trinco
 
-            usleep(rand() % 5000000);        // Espera 0-5s
-            sem_post(&sem_FilaEntradaDisco); // sai da fila de entrada da discoteca
+            usleep(rand() % 5000000);     // Espera 0-5s
+            sem_post(&sem_FilaDiscoteca); // sai da fila de entrada da discoteca
             // Notificar Acontecimento
             cliente->acontecimento = 20; // Acontecimento: Desistência da fila - Discoteca
             timespec_get(&ts, TIME_UTC); // Tempo atual
@@ -639,8 +833,8 @@ void *rotinaCliente(void *ptr)
     } while (1);
 
     // Cliente quer entrar na Discoteca
-    sem_wait(&sem_Discoteca);        // Tenta entrar na discoteca, quando consuege entrar,
-    sem_post(&sem_FilaEntradaDisco); // sai da fila de entrada
+    sem_wait(&sem_Discoteca);     // Tenta entrar na discoteca, quando consuege entrar,
+    sem_post(&sem_FilaDiscoteca); // sai da fila de entrada
     // Notificar Acontecimento
     cliente->acontecimento = 00; // Acontecimento: Entrada - Discoteca
     timespec_get(&ts, TIME_UTC); // Pega no tempo atual e guarda no cliente
@@ -770,23 +964,30 @@ int main(void)
         close(sockfd);
         exit(0);
     }
-    // Fim da espera para iniciar simulação
+
+    /// INICIAR SIMULAÇÃO ///
 
     // ---> Inicializar os Trincos <--- //
-    pthread_mutex_init(&mutex_afDiscoteca, NULL); // Trinco para abrir ou fechar a discoteca;
-    pthread_mutex_init(&mutex_tarefasExit, NULL); // Trinco para seccção crítica num tarefas exit
+    pthread_mutex_init(&mutex_afDiscoteca, NULL); // Trinco para abrir ou fechar a discoteca
+    pthread_mutex_init(&mutex_tarefasExit, NULL); // Trinco para seccção crítica da variável tarefasExit
+
+    // Trincos das variáveis de controlo das filas das zonas
+    pthread_mutex_init(&mutex_nClientes_Fila_PistaDanca, NULL); // Zona1
+    pthread_mutex_init(&mutex_nClientes_Fila_ZonaVIP, NULL);    // Zona2
+    pthread_mutex_init(&mutex_nClientes_Fila_WC, NULL);         // Zona3
+    pthread_mutex_init(&mutex_nClientes_Restaurante, NULL);     // Zona4
 
     // ---> Inicializar os Semáforos <--- // Segundo argumento sem_init a 0, significa que é partilhado entre tarefas
 
     sem_init(&sem_EnviarAcontMonitor, 0, 1); // Iniciado a 1, exclusão mútua, só uma tarefa é que envia de cada vez o aconteciemento ao monitor
 
     // Discoteca - Z0 (Zona 0)
-    sem_init(&sem_FilaEntradaDisco, 0, disco.z0_fila_max); // Semaforo para a fila de esepra da discoteca
-    sem_init(&sem_Discoteca, 0, disco.z0_max);             // Semaforo para a capacidade máxima da discoteca
+    sem_init(&sem_FilaDiscoteca, 0, disco.z0_fila_max); // Semaforo para a fila de esepra da discoteca
+    sem_init(&sem_Discoteca, 0, disco.z0_max);          // Semaforo para a capacidade máxima da discoteca
 
     // Pista de Dança - Z1 (Zona 1)
-    sem_init(&sem_FilaEntradaPistaD, 0, disco.z1_fila_max); // Semaforo para a fila de espera da pista de dança
-    sem_init(&sem_PistaDanca, 0, disco.z1_max);             // Semaforo para a capacidade máxima da pista de dança
+    sem_init(&sem_FilaPistaDanca, 0, disco.z1_fila_max); // Semaforo para a fila de espera da pista de dança
+    sem_init(&sem_PistaDanca, 0, disco.z1_max);          // Semaforo para a capacidade máxima da pista de dança
 
     // Zona Vip - Z2 (Zona 2)
     sem_init(&sem_FilaZonaVIP, 0, disco.z2_fila_max); // Semaforo para a fila de espera da zona vip
@@ -798,7 +999,8 @@ int main(void)
              configuração inicial original 1, ou seja, semaforo inicializado em exlusão mútua*/
 
     // Restaurante - Z4 (Zona 4)
-    sem_init(&sem_Restaurante, 0, disco.z4_max); // Semaforo para a capacidade máxima do restaurante
+    sem_init(&sem_Restaurante, 0, disco.z4_max);            // Semaforo para a capacidade máxima do restaurante
+    sem_init(&sem_RestauranteBuffet, 0, disco.z4_fila_max); // Semaforo para a capacidade máxima do buffet do restaurante
 
     // Criar Tarefa para Abrir/Fechar a Discoteca
     if (pthread_create(&(abrirFecharDisco), NULL, *RotinaAbrirDiscoteca, &horarioDiscoteca) != 0)

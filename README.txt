@@ -1,6 +1,6 @@
 NOTA:   ALTERAR OS PRINTS COM OS ACONTECIMENTOS, estão desatualizados!
 NOTA2:  Discutir o menu final do simulador!
-NOTA3:  Impedir clientes de ficarem á espera para entrar nas filas de espera!
+NOTA4:  Novo Acontecimento saiuDisco depois da Disco fechar?
 
 Projeto SO 22/23 Simulação de uma discoteca!
 Alunos: 
@@ -35,10 +35,12 @@ Efetuar -ggc version, caso der erro:
 https://linuxize.com/post/how-to-install-gcc-compiler-on-ubuntu-18-04/
 
 Ficheiro de configurações iniciais do Simulador (simulador_config_inicial.txt):
-Limitações:
+Limitações (Não pode alterar):
     Não alterar o número de zonas da discoteca.
-    Não alterar o nome das zonas.
-Pode fazer:
+    Alterando o nome das zonas, não altera o nome das zonas na simulação
+    Não colocar a fila_max de qualquer zona a 0.
+
+Pode fazer (pode alterar):
     Alterar a Capacidade de cada zona e da fila.
     Alterar as Probabilidades.
 
@@ -52,6 +54,7 @@ Acontecimentos do projeto:
 02 : Entrada - Zona VIP
 03 : Entrada - WC
 04 : Entrada - Restaurante
+05 : Entrada - Restaurante-Buffet
 
 10 : Espera na fila - Discoteca
 11 : Espera na fila - Pista de Dança
@@ -68,5 +71,11 @@ Acontecimentos do projeto:
 32 : Saída - Zona VIP
 33 : Saída - WC
 34 : Saída - Restaurante
+35 : Saída - Restaurante-Buffet
 38 : Saída - Expulso da Zona VIP
 39 : Saída - Expulso da Discoteca
+
+41 : Fila cheia - Pista de Dança
+42 : Fila cheia - Zona VIP
+43 : Fila cheia - WC
+44 : Fila cheia - Restaurante
