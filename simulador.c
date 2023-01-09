@@ -52,7 +52,7 @@ typedef struct cliente // tarefa = cliente
 {
     int id_cliente;    // ID do cliente
     int acontecimento; // O que esta a fazer agora
-    int tempo;         // Ainda não sei como implementar
+    int tempo;         // Tempo em que ocorreu o acontecimento
     int vip;           // 1 - VIP | 0 - Não é VIP
 };
 

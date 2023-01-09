@@ -1,10 +1,10 @@
-Projeto SO 22/23 Simulação de uma discoteca!
+Projeto SO 22/23 Simulação de uma Discoteca!
 Alunos: 
 Filipe Lopes - 2048619
 Tom Mendonça - 2049919
 José Branco  - 2034117
 
-Instruções:
+Instruções para colocar o projeto a funcionar:
 
 1- Executar o comando make clean e depois o comando make.
 2- Ligar o monitor.
@@ -14,34 +14,16 @@ Instruções:
 Nota: O simulador só executa depois do monitor se ter ligado.
 
 
-*--- Usamos os sockets sockets-unix-stream para o nosso projeto  ---*
-
-unix-stream-server.c = monitor.c
-util-stream-server.c = monitor_config.c
-
-unix-stream-client.c = simulador.c
-util-stream-client.c = simulador_config.c
-
-*---                                                             ---*
+**Usamos os sockets sockets-unix-stream, dados pelos professores, no nosso projeto**
 
 Possível problema, utilizador de MAC!
-Efetuar -ggc version, caso der erro:
+Poderá ser necessário a instalação do gcc complitar
 
 *Para conseguir efetuar compilações com gcc no Ubuntu é poderá necessário efetuar a instalação:
 https://linuxize.com/post/how-to-install-gcc-compiler-on-ubuntu-18-04/
 
-Ficheiro de configurações iniciais do Simulador (simulador_config_inicial.txt):
-Limitações (Não pode alterar):
-    Não alterar o número de zonas da discoteca.
-    Alterando o nome das zonas, não altera o nome das zonas na simulação
-    Não colocar a fila_max de qualquer zona a 0.
 
-Pode fazer (pode alterar):
-    Alterar a Capacidade de cada Zona e respetiva Fila.
-    Alterar as Probabilidades.
-
-
-Acontecimentos do projeto
+Acontecimentos do Projeto
 
 60 : Abertura da Discoteca
 69 : Encerramento da Discoteca
