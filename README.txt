@@ -17,7 +17,7 @@ Nota: O simulador só executa depois do monitor se ter ligado.
 **Usamos os sockets sockets-unix-stream, dados pelos professores, no nosso projeto**
 
 Possível problema, utilizador de MAC!
-Poderá ser necessário a instalação do gcc complitar
+Poderá ser necessário a instalação do gcc compiler.
 
 *Para conseguir efetuar compilações com gcc no Ubuntu é poderá necessário efetuar a instalação:
 https://linuxize.com/post/how-to-install-gcc-compiler-on-ubuntu-18-04/
